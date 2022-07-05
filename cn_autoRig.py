@@ -3,12 +3,10 @@ import maya.cmds as mc
 import maya.mel as mel
 import pymel.core as pm
 import pprint as pp
-import maya.OpenMaya as om 
+import maya.OpenMaya as om
+import sys
 
-#this is a test
-
-        
-
+sys.path.append()
 
 # object constants
 GROUP = 'GRP'
