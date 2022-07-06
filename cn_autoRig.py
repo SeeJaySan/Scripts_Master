@@ -4,9 +4,7 @@ import maya.mel as mel
 import pymel.core as pm
 import pprint as pp
 import maya.OpenMaya as om
-import sys
-
-sys.path.append()
+from third_party import zbw_controlShapes as zbw_con
 
 # object constants
 GROUP = 'GRP'
@@ -485,6 +483,9 @@ def cubeShape(CRVname='test', *args):
     curve = mc.curve(n=CRVname, d=1, p=[(-1, 1, 1), (1, 1, 1), (1, -1, 1), (-1, -1, 1), (-1, 1, 1), (-1, 1, -1), (-1, -1, -1),
                                         (-1, -1, 1), (-1, -1, -1), (1, -1, -1), (1, -1, 1), (1, 1, 1), (1, 1, -1), (1, -1, -1), (1, 1, -1), (-1, 1, -1)],
                     k=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16])
+
     cube_control.append(str(curve))
     mc.select(cl=True)
     return cube_control
+
+that = mc.curve(n='this', d=1, p=zbw_con.shapes['cube'])
