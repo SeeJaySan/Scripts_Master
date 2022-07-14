@@ -5,9 +5,9 @@ from PySide2 import QtWidgets, QtCore, QtGui
 from shiboken2 import wrapInstance
 
 # IMPORT_maya
-import maya.cmds as mc
-import maya.OpenMaya as om
-import maya.OpenMayaUI as omui # e402
+from maya import cmds as mc
+from maya import OpenMaya as om
+from maya import OpenMayaUI as omui
 
 # IMPORT_Third-Party
 from third_party import zbw_controlShapes as zbw_con
@@ -31,7 +31,7 @@ class TwoBoneIKFKUI(QtWidgets.QDialog):
     def __init__(self, parent=maya_main_window()):
         super(TwoBoneIKFKUI, self).__init__(parent)
 
-        self.setWindowTitle("IKFK_v01")
+        self.setWindowTitle("IKFK_Tool_v01")
         self.setMinimumSize(100, 50)
 
         self.create_widgets()
@@ -49,9 +49,10 @@ class TwoBoneIKFKUI(QtWidgets.QDialog):
         self.type_le = QtWidgets.QLineEdit('Arm')
 
         self.orientation_cb = QtWidgets.QComboBox()
+
         self.orientation_cb.addItems(
             ['xyz', 'yzx', 'zxy', 'xzy', 'yxz', 'zyx'])
-            
+
         self.jointOrientation_X_rb = QtWidgets.QRadioButton('X')
         self.jointOrientation_Y_rb = QtWidgets.QRadioButton('Y')
         self.jointOrientation_Z_rb = QtWidgets.QRadioButton('Z')
@@ -69,10 +70,11 @@ class TwoBoneIKFKUI(QtWidgets.QDialog):
         self.create_rig_btn = QtWidgets.QPushButton('Create Rig')
 
         self.mirror_ckb = QtWidgets.QCheckBox('Mirror')
+        self.mirror_ckb.toggle()
         self.stretch_ckb = QtWidgets.QCheckBox('Stretch')
         self.twist_ckb = QtWidgets.QCheckBox('twist joints')
 
-        self.rig = TwoBoneIKFK(orientation=self.orientation_cb)
+        self.rig = TwoBoneIKFK()
 
     # Create Layouts
     def create_layout(self):
@@ -134,34 +136,23 @@ class TwoBoneIKFKUI(QtWidgets.QDialog):
         self.type_le.textChanged.connect(self.rig.update_type)
         self.mirror_ckb.toggled.connect(self.rig.update_mirror)
 
-        self.orientation_cb.activated[str].connect(self.combo_box_print)
-
         # creates rig
         self.create_guides_btn.clicked.connect(self.rig.build_guides)
         self.create_joints_btn.clicked.connect(self.rig.build_joints)
         self.create_rig_btn.clicked.connect(self.rig.build_rig)
 
-    def print_side_le(self):
-        side_label = self.side_le.text()
-        print(side_label)
-
-    @QtCore.Slot(str)
-    def combo_box_print(self, text):
-        print(text)
-
-    def mirror_check(self, mirror):
-        if mirror:
-            print('something is happening')
-
 
 class TwoBoneIKFK(object):  # not working
 
-    def __init__(self, orientation):
+    def __init__(self):
         self.rigType = 'arm'
-        self.side = None
+        self.side = 'L'
         self.prefix = 'L'
-        self.jointOrientation = orientation
-        self.mirror = 0
+        self.jointOrientation = 'xyz'
+        self.mirror = 1
+
+        self.left_dict = {}
+        self.right_dict = {}
 
         # object constants
         self.GROUP = 'GRP'
@@ -186,10 +177,13 @@ class TwoBoneIKFK(object):  # not working
                         'RING': ('RING1', 'RING2', 'RING3', 'RINGEND'),
                         'PINKY': ('THUMB1', 'PINKY2', 'PINKY3', 'PINKYEND')}}
 
+        self.error = 'IKFK Tool Error:'
+        self.prefix_error_check = ''
+        self.rigType_error_check = ''
+
     # update the values from the ui window
     def update_side(self, text):
         self.prefix = text
-        print(text)
 
     def update_type(self, rigtype):
         self.rigType = rigtype
@@ -203,6 +197,10 @@ class TwoBoneIKFK(object):  # not working
         print(self.mirror)
 
     def create_guides(self):
+
+        if self.prefix == self.prefix_error_check and self.rigType == self.rigType_error_check and mc.objExists(self.rigPart):
+            om.MGlobal_displayError('{0} Duplicate rig error. Please change the names'.format(self.error))
+            return
 
         # build guide group
         arm_guide_group = mc.createNode(
@@ -315,14 +313,16 @@ class TwoBoneIKFK(object):  # not working
         return [jnt for jnt in mc.listRelatives(grp, ad=True) if mc.objExists(grp)]
 
     # Create Hierarchy
-    def createHierarchy(self):
+    def createHierarchy(self, side_dict = {}, mirroring=0):
         # if not self.rig_Group:
         #    self.rig_Group = mc.createNode()
 
         self.rigPart = mc.createNode(
-            'transform', name='{}_{}_{}'.format(self.side, self.rigType, self.GROUP))
-        mc.parent('{}_{}_{}_{}'.format(
-            self.prefix, self.rigType, self.GUIDE, self.GROUP), self.rigPart)
+            'transform', name='{}_{}_{}'.format(self.prefix, self.rigType, self.GROUP))
+
+        if not mirroring:
+            mc.parent('{}_{}_{}_{}'.format(
+                self.prefix, self.rigType, self.GUIDE, self.GROUP), self.rigPart)
 
         self.arm_jnt_group = mc.createNode(
             'transform', name='{}_{}_{}_{}'.format(self.prefix, self.rigType, self.JOINT, self.GROUP), parent=self.rigPart)
@@ -342,7 +342,7 @@ class TwoBoneIKFK(object):  # not working
     def createJoints(self, jointOrientation='xyz', secondAxisOrientation='zup'):
         multiple = 1
         for guide in self.arm_guides():
-            pp.pprint(guide)
+            # pp.pprint(guide)
             mat = mc.xform(
                 guide, q=True, m=True, ws=True)
             jnt = mc.joint(
@@ -353,31 +353,31 @@ class TwoBoneIKFK(object):  # not working
                 self.prefix, self.rigType, self.JOINT, self.GROUP))
             multiple = multiple + 1
 
-        joint_group = self.arm_joints()
-        mc.parent(joint_group[2], joint_group[1])
-        mc.parent(joint_group[1], joint_group[0])
+        self.bind_joints = self.arm_joints()
+        mc.parent(self.bind_joints[2], self.bind_joints[1])
+        mc.parent(self.bind_joints[1], self.bind_joints[0])
 
-        mc.makeIdentity(joint_group[0], a=True, t=0, r=1, s=0, n=0, pn=True)
-        mc.makeIdentity(joint_group[1], a=True, t=0, r=1, s=0, n=0, pn=True)
-        mc.makeIdentity(joint_group[2], a=True, t=0, r=1, s=0, n=0, pn=True)
+        mc.makeIdentity(self.bind_joints[0], a=True, t=0, r=1, s=0, n=0, pn=True)
+        mc.makeIdentity(self.bind_joints[1], a=True, t=0, r=1, s=0, n=0, pn=True)
+        mc.makeIdentity(self.bind_joints[2], a=True, t=0, r=1, s=0, n=0, pn=True)
 
         # orient the self.SHOULDER and the self.ELBOW
-        mc.select(joint_group[0])
+        mc.select(self.bind_joints[0])
         mc.joint(edit=True, oj=jointOrientation,
                  sao=secondAxisOrientation, ch=True, zso=True)
 
-        mc.select(joint_group[1])
+        mc.select(self.bind_joints[1])
         mc.joint(edit=True, oj=jointOrientation,
                  sao=secondAxisOrientation, ch=True, zso=True)
 
         # orient the self.WRIST to the world
-        mc.select(joint_group[2])
+        mc.select(self.bind_joints[2])
         mc.joint(edit=True, oj='none')
 
         mc.delete('{}_{}_{}_{}'.format(
             self.prefix, self.rigType, self.GUIDE, self.GROUP))
 
-    def ikfkProcessdure(self):
+    def ikfkProcessdure(self, mirroring=0):
         joint_list = mc.listRelatives(
             '{}_{}_{}_{}'.format(self.prefix, self.rigType, self.JOINT, self.GROUP), ad=True)
         joint_list.reverse()
@@ -463,41 +463,41 @@ class TwoBoneIKFK(object):  # not working
         else:
             mc.setAttr((self.fk_controls_group + '.overrideColor'), 13)
 
-        shoulder_controls_offset = mc.createNode(
-            'transform', name='{}_{}_{}'.format(self.prefix, self.SHOULDER, self.OFFSET), parent=self.fk_controls_group)
-        shoulder_control = mc.circle(
-            name='{}_{}_{}'.format(self.prefix, self.SHOULDER, self.CONTROL), nr=(1, 0, 0))[0]
-        mc.parent(shoulder_control, shoulder_controls_offset)
+        self.root_controls_offset = mc.createNode(
+            'transform', name='{}_{}_{}_{}'.format(self.prefix, self.rigType, self.SHOULDER, self.OFFSET), parent=self.fk_controls_group)
+        self.root_control = mc.circle(
+            name='{}_{}_{}_{}'.format(self.prefix, self.rigType, self.SHOULDER, self.CONTROL), nr=(1, 0, 0))[0]
+        mc.parent(self.root_control, self.root_controls_offset)
         shoulder_mat = mc.xform('{}_{}_Skin1_{}'.format(
             self.prefix, self.rigType, self.JOINT), q=True, m=True, ws=True)
         mc.xform(self.fk_controls_group, m=shoulder_mat, ws=True)
 
-        elbow_controls_offset = mc.createNode(
-            'transform', name='{}_{}_{}'.format(self.prefix, self.ELBOW, self.OFFSET), parent=shoulder_control)
-        elbow_control = mc.circle(
-            name='{}_{}_{}'.format(self.prefix, self.ELBOW, self.CONTROL), nr=(1, 0, 0))[0]
+        self.mid_controls_offset = mc.createNode(
+            'transform', name='{}_{}_{}_{}'.format(self.prefix, self.rigType, self.ELBOW, self.OFFSET), parent=self.root_control)
+        self.mid_control = mc.circle(
+            name='{}_{}_{}_{}'.format(self.prefix, self.rigType, self.ELBOW, self.CONTROL), nr=(1, 0, 0))[0]
         elbow_mat = mc.xform(
             '{}_{}_Skin2_{}'.format(self.prefix, self.rigType, self.JOINT), q=True, m=True, ws=True)
-        mc.parent(elbow_control, elbow_controls_offset)
-        mc.xform(elbow_controls_offset, m=elbow_mat, ws=True)
-        mc.xform(elbow_control, m=elbow_mat, ws=True)
+        mc.parent(self.mid_control, self.mid_controls_offset)
+        mc.xform(self.mid_controls_offset, m=elbow_mat, ws=True)
+        mc.xform(self.mid_control, m=elbow_mat, ws=True)
 
-        wrist_controls_offset = mc.createNode(
-            'transform', name='{}_{}_{}'.format(self.prefix, self.WRIST, self.OFFSET), parent=elbow_control)
-        wrist_control = mc.circle(name='{}_{}_{}'.format(
-            self.prefix, self.WRIST, self.CONTROL), nr=(1, 0, 0))[0]
+        self.end_controls_offset = mc.createNode(
+            'transform', name='{}_{}_{}_{}'.format(self.prefix, self.rigType, self.WRIST, self.OFFSET), parent=self.mid_control)
+        self.end_control = mc.circle(name='{}_{}_{}_{}'.format(
+            self.prefix, self.rigType, self.WRIST, self.CONTROL), nr=(1, 0, 0))[0]
         wrist_mat = mc.xform('{}_{}_Skin3_{}'.format(
             self.prefix, self.rigType, self.JOINT), q=True, m=True, ws=True)
 
-        mc.parent(wrist_control, wrist_controls_offset)
-        mc.xform(wrist_controls_offset, m=wrist_mat, ws=True)
-        mc.xform(wrist_control, m=wrist_mat, ws=True)
+        mc.parent(self.end_control, self.end_controls_offset)
+        mc.xform(self.end_controls_offset, m=wrist_mat, ws=True)
+        mc.xform(self.end_control, m=wrist_mat, ws=True)
 
-        mc.parentConstraint(shoulder_control, '{}_{}_FK1_{}'.format(
+        mc.parentConstraint(self.root_control, '{}_{}_FK1_{}'.format(
             self.prefix, self.rigType, self.JOINT), mo=True)
-        mc.parentConstraint(elbow_control, '{}_{}_FK2_{}'.format(
+        mc.parentConstraint(self.mid_control, '{}_{}_FK2_{}'.format(
             self.prefix, self.rigType, self.JOINT), mo=True)
-        mc.parentConstraint(wrist_control, '{}_{}_FK3_{}'.format(
+        mc.parentConstraint(self.end_control, '{}_{}_FK3_{}'.format(
             self.prefix, self.rigType, self.JOINT), mo=True)
 
         mc.parent('{}_{}_FKControls_{}'.format(self.prefix, self.rigType, self.GROUP),
@@ -521,7 +521,6 @@ class TwoBoneIKFK(object):  # not working
         # Create Control
         self.IKR_wrist_control = mc.curve(n='{}_{}_{}'.format(
             self.prefix, self.rigType, self.CONTROL), d=1, p=zbw_con.shapes['cube'])
-        print(self.IKR_wrist_control)
 
         # move things into position
         IK_wrist_mat = mc.xform(
@@ -530,7 +529,6 @@ class TwoBoneIKFK(object):  # not working
         mc.xform(IK_wrist_GRP, m=IK_wrist_mat, ws=True)
         mc.xform(self.IKR_wrist_control, m=IK_wrist_mat, ws=True)
         mc.parent(self.IKR_wrist_control, IK_controls_offset)
-        pp.pprint(self.IKR_wrist_control)
         mc.parent(IKR_Handle, self.IKR_wrist_control)
 
         mc.parent(IK_wrist_GRP, '{}_{}_{}_{}'.format(
@@ -586,28 +584,28 @@ class TwoBoneIKFK(object):  # not working
         get_pole_vec_pos(root_joint_pos, mid_joint_pos, end_joint_pos)
 
     def create_asset_and_atributes(self):
-        self.arm_atributes_Grp = mc.createNode(
+        self.ikfk_atributes_Grp = mc.createNode(
             'transform', name='{}_{}_ATRIBUTES_GRP'.format(self.prefix, self.rigType))
         mc.addAttr(ln='IKFK_Switch', at='float', k=True,  min=0, max=1)
         self.arm_atributes_asset = mc.container(
             name='{}_{}_ASSET'.format(self.prefix, self.rigType))
-        mc.parent(self.arm_atributes_Grp, self.rigPart)
+        mc.parent(self.ikfk_atributes_Grp, self.rigPart)
         mc.container(self.arm_atributes_asset, e=True, ish=True,
-                     f=True, an=self.arm_atributes_Grp)
+                     f=True, an=self.ikfk_atributes_Grp)
 
-    def make_connections(self):  # FIXME
+    def make_connections(self):
         # IKFK switch
 
         IKFK_reverse = mc.createNode('reverse', n='{}_{}_IKFK_reverse')
 
         mc.container(self.arm_atributes_asset, edit=True,
-                     addNode='{}_{}_{}'.format(self.prefix, self.SHOULDER, self.CONTROL))
+                     addNode=self.root_control)
 
         mc.container(self.arm_atributes_asset, edit=True,
-                     addNode='{}_{}_{}'.format(self.prefix, self.ELBOW, self.CONTROL))
+                     addNode=self.mid_control)
 
         mc.container(self.arm_atributes_asset, edit=True,
-                     addNode='{}_{}_{}'.format(self.prefix, self.WRIST, self.CONTROL))
+                     addNode=self.end_control)
 
         mc.container(self.arm_atributes_asset, edit=True,
                      addNode=self.IKR_wrist_control)
@@ -615,11 +613,13 @@ class TwoBoneIKFK(object):  # not working
         mc.container(self.arm_atributes_asset, edit=True,
                      addNode='{}_{}_PV_{}'.format(self.prefix, self.rigType, self.CONTROL))
 
+        # publish name IKFK Switch
         mc.container(self.arm_atributes_asset, e=True, pn=('IKFK_Switch'))
+        # bind ikfk atribute from the group to the container asset
         mc.container(self.arm_atributes_asset, e=True, ba=(
-            self.arm_atributes_Grp + '.IKFK_Switch', 'IKFK_Switch'))
+            self.ikfk_atributes_Grp + '.IKFK_Switch', 'IKFK_Switch'))
 
-        mc.connectAttr(self.arm_atributes_Grp + '.IKFK_Switch',
+        mc.connectAttr(self.ikfk_atributes_Grp + '.IKFK_Switch',
                        IKFK_reverse + '.input.inputX')
 
         mc.connectAttr(IKFK_reverse + '.input.inputX',
@@ -669,3 +669,44 @@ class TwoBoneIKFK(object):  # not working
         # TODO: self.create_twist_joints()
         # TODO: self.create_bend_joints()
         # TODO: self.create_stretch()
+
+
+        # Mirror the joint on the YZ plain from the center of the world
+
+        if self.mirror == 1:
+            # checking the prefix name
+            if self.prefix == 'L':
+                pass
+            else:
+                # If anything other that 'L' is the prefix, throw an error
+                om.MGlobal_displayError(
+                    'IKFK Tool: mirroring only supported for left (L) to right (R)')
+                return
+
+            self.old_prefix = self.prefix
+            
+            self.prefix = 'R'
+            print(self.prefix)
+
+            self.createHierarchy(mirroring=1)
+
+            mc.select(cl=1)
+            dummy_root_joint = mc.joint(n='{}_{}_mirror_dummie_{}'.format(
+                self.side, self.rigType, self.JOINT))
+            mc.parent(self.bind_joints[0], dummy_root_joint)
+            mirrored_joints = mc.mirrorJoint(self.bind_joints[0], myz=True, mb=True, searchReplace=['L_', 'R_'])
+            mc.parent(self.bind_joints[0], '{}_{}_{}_{}'.format(self.old_prefix, self.rigType, self.JOINT, self.GROUP))
+          
+            mc.parent(mirrored_joints[0], '{}_{}_{}_{}'.format(self.prefix, self.rigType, self.JOINT, self.GROUP))
+            mc.delete(dummy_root_joint)
+
+            self.ikfkProcessdure(mirroring=1)
+            self.create_fk_controls()
+            self.create_ik_controls()
+            self.create_pole_target()
+            self.create_asset_and_atributes()
+            self.make_connections()
+
+            self.prefix = self.old_prefix
+            self.prefix_error_check = self.prefix
+            self.rigType_error_check = self.rigType
