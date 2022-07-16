@@ -19,9 +19,13 @@ print (cn_autoRig)
 
 auto_rig = cn_autoRig.TwoBoneIKFKUI()
 
+if __name__ == '__main__':
 
-auto_rig.rig.build_guides()
-
-auto_rig.rig.build_joints()
-
-auto_rig.rig.build_rig()
+    try:
+        test_dialog.close()
+        test_dialog.deleteLater()
+    except:
+        pass
+    
+    test_dialog = cn_autoRig.TwoBoneIKFKUI()
+    test_dialog.show()
