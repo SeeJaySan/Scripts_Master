@@ -1,7 +1,9 @@
 # IMPORT_Python
+from ast import Str
 import sys
 import pprint as pp
 from tkinter import Button
+from turtle import update
 from PySide2 import QtWidgets, QtCore, QtGui
 from shiboken2 import wrapInstance
 
@@ -31,7 +33,7 @@ class TwoBoneIKFKUI(QtWidgets.QDialog):
     def __init__(self, parent=maya_main_window()):
         super(TwoBoneIKFKUI, self).__init__(parent)
 
-        self.setWindowTitle("IKFK_Tool_v01")
+        self.setWindowTitle("cn_Ikfk_Tool_v01")
         self.setMaximumSize(500, 500)
         self.setMinimumSize(200, 200)
 
@@ -52,17 +54,13 @@ class TwoBoneIKFKUI(QtWidgets.QDialog):
         self.type_lb = QtWidgets.QLabel('Rig Type:')
         self.type_le = QtWidgets.QLineEdit('Arm')
 
+        self.orientation_lb = QtWidgets.QLabel('Aim Axis:')
+        self.orientation_cb = QtWidgets.QComboBox()
+
+        self.up_lb = QtWidgets.QLabel('Secondary Axis:')
+        self.up_cb = QtWidgets.QComboBox()
+
         self.extra_lb = QtWidgets.QLabel('Extra Settings:')
-
-        self.jointOrientation_lb = QtWidgets.QLabel('Aim Axis')
-        self.jointOrientation_X_rb = QtWidgets.QRadioButton('X')
-        self.jointOrientation_Y_rb = QtWidgets.QRadioButton('Y')
-        self.jointOrientation_Z_rb = QtWidgets.QRadioButton('Z')
-
-        self.secondaryOrientationUP_lb = QtWidgets.QLabel('Aim Axis')
-        self.secondaryOrientationUP_X_rb = QtWidgets.QRadioButton('X')
-        self.secondaryOrientationUP_Y_rb = QtWidgets.QRadioButton('Y')
-        self.secondaryOrientationUP_Z_rb = QtWidgets.QRadioButton('Z')
 
         self.jointOrientation_reverse_ckb = QtWidgets.QCheckBox('Reverse')
         self.secondaryOrientationUP_reverse_ckb = QtWidgets.QCheckBox(
@@ -96,25 +94,21 @@ class TwoBoneIKFKUI(QtWidgets.QDialog):
         naming_layout_hbox.addWidget(self.type_lb)
         naming_layout_hbox.addWidget(self.type_le)
 
-        # Aim Axis Layout
-        aim_layout_gb = QtWidgets.QGroupBox()
-        aim_layout_hbox = QtWidgets.QHBoxLayout()
-        aim_layout_gb.setLayout(aim_layout_hbox)
-        aim_layout_hbox.addWidget(self.jointOrientation_lb)
-        aim_layout_hbox.addWidget(self.jointOrientation_X_rb)
-        aim_layout_hbox.addWidget(self.jointOrientation_Y_rb)
-        aim_layout_hbox.addWidget(self.jointOrientation_Z_rb)
-        aim_layout_hbox.addWidget(self.jointOrientation_reverse_ckb)
-
-        # Up Axis Layout
-        Up_layout_gb = QtWidgets.QGroupBox()
-        Up_layout_hbox = QtWidgets.QHBoxLayout()
-        Up_layout_gb.setLayout(Up_layout_hbox)
-        Up_layout_hbox.addWidget(self.secondaryOrientationUP_lb)
-        Up_layout_hbox.addWidget(self.secondaryOrientationUP_X_rb)
-        Up_layout_hbox.addWidget(self.secondaryOrientationUP_Y_rb)
-        Up_layout_hbox.addWidget(self.secondaryOrientationUP_Z_rb)
-        Up_layout_hbox.addWidget(self.secondaryOrientationUP_reverse_ckb)
+        # Orientatin Combo Box
+        orientation_layout_gb = QtWidgets.QGroupBox()
+        orientation_layout_hbox = QtWidgets.QHBoxLayout()
+        orientation_layout_gb.setLayout(orientation_layout_hbox)
+        orientation_layout_hbox.addWidget(self.orientation_lb)
+        orientation_layout_hbox.addWidget(self.orientation_cb)
+        self.orientation_cb.addItems(
+            ['xyz', 'yzx', 'zxy', 'xzy', 'yxz', 'zyx'])
+        self.orientation_cb.setCurrentIndex(1)
+        orientation_layout_hbox.addWidget(self.up_lb)
+        orientation_layout_hbox.addStretch()
+        orientation_layout_hbox.addWidget(self.up_cb)
+        self.up_cb.addItems(
+            ['xup', 'xdown', 'yup', 'ydown', 'zup', 'zdown'])
+        self.up_cb.setCurrentIndex(1)
 
         # Button Layout
         Button_layout_vbox = QtWidgets.QVBoxLayout()
@@ -136,12 +130,13 @@ class TwoBoneIKFKUI(QtWidgets.QDialog):
 
         # Building IKFK info fields
         ikfk_info_layout_form.addRow(naming_layout_hbox)
-        ikfk_info_layout_form.addRow(aim_layout_gb)
-        ikfk_info_layout_form.addRow(Up_layout_gb)
+        ikfk_info_layout_form.addRow(orientation_layout_gb)
+        # ikfk_info_layout_form.addRow(aim_layout_gb)
+        # ikfk_info_layout_form.addRow(Up_layout_gb)
 
         extra_settings_layout_form.addRow(extra_settings_layout_hbox)
 
-        # Building Main Layout
+        # Building Main Layout-----------------------------------------|
         main_layout = QtWidgets.QVBoxLayout(self)
         main_layout.addLayout(ikfk_info_layout_form)
         main_layout.addLayout(Button_layout_vbox)
@@ -153,6 +148,10 @@ class TwoBoneIKFKUI(QtWidgets.QDialog):
         self.side_le.textChanged.connect(self.rig.update_side)
         self.type_le.textChanged.connect(self.rig.update_type)
         self.mirror_ckb.toggled.connect(self.rig.update_mirror)
+        self.orientation_cb.currentIndexChanged.connect(
+            self.rig.update_orientation)
+        self.up_cb.currentIndexChanged.connect(
+            self.rig.update_up)
 
         # creates rig
         self.create_guides_btn.clicked.connect(self.rig.build_guides)
@@ -167,7 +166,8 @@ class TwoBoneIKFK(object):  # not working
         self.rigType = 'arm'
         self.side = 'L'
         self.prefix = 'L'
-        self.jointOrientation = 'xyz'
+        self.jointOrientation = 'yzx'
+        self.orientationUp = 'xdown'
         self.mirror = 1
 
         self.left_dict = {}
@@ -200,29 +200,66 @@ class TwoBoneIKFK(object):  # not working
         self.prefix_error_check = ''
         self.rigType_error_check = ''
 
-    # update the values from the ui window
+    # Update the values from the ui window input
     def update_side(self, text):
+
         self.prefix = text
         if ' ' in self.prefix:
             self.side = self.prefix.replace(' ', '_')
         print(text)
 
     def update_type(self, rigtype):
+
         self.rigType = rigtype
         if ' ' in self.rigType:
             self.rigType = self.rigType.replace(' ', '_')
         print(rigtype)
 
     def update_mirror(self, mirror):
+
         if mirror:
             self.mirror = 1
         else:
             self.mirror = 0
         print(self.mirror)
 
+    def update_orientation(self, orientation):
+
+        if orientation == 0:
+            self.jointOrientation = 'xyz'
+        elif orientation == 1:
+            self.jointOrientation = 'yzx'
+        elif orientation == 2:
+            self.jointOrientation = 'zxy'
+        elif orientation == 3:
+            self.jointOrientation = 'xzy'
+        elif orientation == 4:
+            self.jointOrientation = 'yxz'
+        elif orientation == 5:
+            self.jointOrientation = 'zyx'
+
+        print(self.jointOrientation)
+
+    def update_up(self, up):
+
+        if up == 0:
+            self.orientationUp = 'xup'
+        elif up == 1:
+            self.orientationUp = 'xdown'
+        elif up == 2:
+            self.orientationUp = 'yup'
+        elif up == 3:
+            self.orientationUp = 'ydown'
+        elif up == 4:
+            self.orientationUp = 'zup'
+        elif up == 5:
+            self.orientationUp = 'zdown'
+
+        print(self.orientationUp)
+
     def create_guides(self):
 
-        # error checking rig duplication errors and existing rig errors
+        # Checking for duplocation errors and existing rig errors
 
         if self.prefix == self.prefix_error_check and self.rigType == self.rigType_error_check and mc.objExists(self.rigPart):
             om.MGlobal_displayError(
@@ -391,12 +428,12 @@ class TwoBoneIKFK(object):  # not working
 
         # orient the self.SHOULDER and the self.ELBOW
         mc.select(self.bind_joints[0])
-        mc.joint(edit=True, oj=jointOrientation,
-                 sao=secondAxisOrientation, ch=True, zso=True)
+        mc.joint(edit=True, oj=self.jointOrientation,
+                 sao=self.orientationUp, ch=True, zso=True)
 
         mc.select(self.bind_joints[1])
-        mc.joint(edit=True, oj=jointOrientation,
-                 sao=secondAxisOrientation, ch=True, zso=True)
+        mc.joint(edit=True, oj=self.jointOrientation,
+                 sao=self.orientationUp, ch=True, zso=True)
 
         # orient the self.WRIST to the world
         mc.select(self.bind_joints[2])
@@ -406,6 +443,7 @@ class TwoBoneIKFK(object):  # not working
             self.prefix, self.rigType, self.GUIDE, self.GROUP))
 
     # Create a warning to check orientations on joint before continuing
+
     def orientationWarning(self):
         om.MGlobal_displayWarning('Check orientations before proceeding')
 
@@ -499,10 +537,18 @@ class TwoBoneIKFK(object):  # not working
         else:
             mc.setAttr((self.fk_controls_group + '.overrideColor'), 17)
 
+        if self.jointOrientation[0] == 'x':
+            self.fk_control_shape_orientation = (1,0,0)
+        elif self.jointOrientation[0] == 'y':
+            self.fk_control_shape_orientation = (0,1,0)
+        elif self.jointOrientation[0] == 'z':
+            self.fk_control_shape_orientation = (0,0,1)
+        
+
         self.root_controls_offset = mc.createNode(
             'transform', name='{}_{}_{}_{}'.format(self.prefix, self.rigType, self.SHOULDER, self.OFFSET), parent=self.fk_controls_group)
         self.root_control = mc.circle(
-            name='{}_{}_{}_{}'.format(self.prefix, self.rigType, self.SHOULDER, self.CONTROL), nr=(1, 0, 0))[0]
+            name='{}_{}_{}_{}'.format(self.prefix, self.rigType, self.SHOULDER, self.CONTROL), nr=self.fk_control_shape_orientation)[0]
         mc.parent(self.root_control, self.root_controls_offset)
         shoulder_mat = mc.xform('{}_{}_Skin1_{}'.format(
             self.prefix, self.rigType, self.JOINT), q=True, m=True, ws=True)
@@ -511,7 +557,7 @@ class TwoBoneIKFK(object):  # not working
         self.mid_controls_offset = mc.createNode(
             'transform', name='{}_{}_{}_{}'.format(self.prefix, self.rigType, self.ELBOW, self.OFFSET), parent=self.root_control)
         self.mid_control = mc.circle(
-            name='{}_{}_{}_{}'.format(self.prefix, self.rigType, self.ELBOW, self.CONTROL), nr=(1, 0, 0))[0]
+            name='{}_{}_{}_{}'.format(self.prefix, self.rigType, self.ELBOW, self.CONTROL), nr=self.fk_control_shape_orientation)[0]
         elbow_mat = mc.xform(
             '{}_{}_Skin2_{}'.format(self.prefix, self.rigType, self.JOINT), q=True, m=True, ws=True)
         mc.parent(self.mid_control, self.mid_controls_offset)
@@ -521,7 +567,7 @@ class TwoBoneIKFK(object):  # not working
         self.end_controls_offset = mc.createNode(
             'transform', name='{}_{}_{}_{}'.format(self.prefix, self.rigType, self.WRIST, self.OFFSET), parent=self.mid_control)
         self.end_control = mc.circle(name='{}_{}_{}_{}'.format(
-            self.prefix, self.rigType, self.WRIST, self.CONTROL), nr=(1, 0, 0))[0]
+            self.prefix, self.rigType, self.WRIST, self.CONTROL), nr=self.fk_control_shape_orientation)[0]
         wrist_mat = mc.xform('{}_{}_Skin3_{}'.format(
             self.prefix, self.rigType, self.JOINT), q=True, m=True, ws=True)
 
@@ -637,45 +683,46 @@ class TwoBoneIKFK(object):  # not working
 
         get_pole_vec_pos(root_joint_pos, mid_joint_pos, end_joint_pos)
 
-    def create_asset_and_atributes(self):
-        self.ikfk_atributes_Grp = mc.createNode(
+    def create_asset_and_attributes(self):
+        self.ikfk_attributes_Grp = mc.createNode(
             'transform', name='{}_{}_ATRIBUTES_GRP'.format(self.prefix, self.rigType))
         mc.addAttr(ln='IKFK_Switch', at='float', k=True,  min=0, max=1)
-        self.arm_atributes_asset = mc.container(
+        self.arm_attributes_asset = mc.container(
             name='{}_{}_ASSET'.format(self.prefix, self.rigType))
-        mc.parent(self.ikfk_atributes_Grp, self.rigPart)
-        mc.container(self.arm_atributes_asset, e=True, ish=True,
-                     f=True, an=self.ikfk_atributes_Grp)
+        mc.parent(self.ikfk_attributes_Grp, self.rigPart)
+        mc.container(self.arm_attributes_asset, e=True, ish=True,
+                     f=True, an=self.ikfk_attributes_Grp)
 
+    # Make connections from the asset to the asset
     def make_connections(self):
-        # IKFK switch
 
+        # IKFK switch
         IKFK_reverse = mc.createNode('reverse', n='{}_{}_IKFK_reverse')
 
-        mc.container(self.arm_atributes_asset, edit=True,
+        # Add controls to the asset
+        mc.container(self.arm_attributes_asset, edit=True,
                      addNode=self.root_control)
-
-        mc.container(self.arm_atributes_asset, edit=True,
+        mc.container(self.arm_attributes_asset, edit=True,
                      addNode=self.mid_control)
-
-        mc.container(self.arm_atributes_asset, edit=True,
+        mc.container(self.arm_attributes_asset, edit=True,
                      addNode=self.end_control)
-
-        mc.container(self.arm_atributes_asset, edit=True,
+        mc.container(self.arm_attributes_asset, edit=True,
                      addNode=self.IKR_wrist_control)
-
-        mc.container(self.arm_atributes_asset, edit=True,
+        mc.container(self.arm_attributes_asset, edit=True,
                      addNode='{}_{}_PV_{}'.format(self.prefix, self.rigType, self.CONTROL))
 
-        # publish name IKFK Switch
-        mc.container(self.arm_atributes_asset, e=True, pn=('IKFK_Switch'))
-        # bind ikfk atribute from the group to the container asset
-        mc.container(self.arm_atributes_asset, e=True, ba=(
-            self.ikfk_atributes_Grp + '.IKFK_Switch', 'IKFK_Switch'))
+        # Publish name 'IKFK Switch'
+        mc.container(self.arm_attributes_asset, e=True, pn=('IKFK_Switch'))
 
-        mc.connectAttr(self.ikfk_atributes_Grp + '.IKFK_Switch',
+        # Bind ikfk attribute from the group to the container asset
+        mc.container(self.arm_attributes_asset, e=True, ba=(
+            self.ikfk_attributes_Grp + '.IKFK_Switch', 'IKFK_Switch'))
+
+        # Connect attribute to the reverse
+        mc.connectAttr(self.ikfk_attributes_Grp + '.IKFK_Switch',
                        IKFK_reverse + '.input.inputX')
 
+        # Connect the reverse to the blend color nodes
         mc.connectAttr(IKFK_reverse + '.input.inputX',
                        self.shoulder_blend_color + '.blender')
         mc.connectAttr(IKFK_reverse + '.input.inputX',
@@ -683,7 +730,36 @@ class TwoBoneIKFK(object):  # not working
         mc.connectAttr(IKFK_reverse + '.input.inputX',
                        self.wrist_blend_color + '.blender')
 
+    # Mirror base joints to create IKFK on the opposing side
+    def mirror_joints(self):
+
+        # Clear selection
+        mc.select(cl=1)
+
+        # Create dummy joint to mirror the joints across
+        mirror_joint = mc.joint(n='{}_{}_mirror_dummie_{}'.format(
+            self.side, self.rigType, self.JOINT))
+
+        # Parent original joint chain to  mirror joint
+        mc.parent(self.bind_joints[0], mirror_joint)
+
+        # Mirror original joint chain
+        mirrored_joints = mc.mirrorJoint(
+            self.bind_joints[0], myz=True, mb=True, searchReplace=['L_', 'R_'])
+
+        # Reparent orginal joint chain to it's group
+        mc.parent(self.bind_joints[0], '{}_{}_{}_{}'.format(
+            self.old_prefix, self.rigType, self.JOINT, self.GROUP))
+
+        # Parent mirrored joint chain to it's group
+        mc.parent(mirrored_joints[0], '{}_{}_{}_{}'.format(
+            self.prefix, self.rigType, self.JOINT, self.GROUP))
+
+        # Delete mirrored joint
+        mc.delete(mirror_joint)
+
     def IKFK_snap_expression(self):  # NOT WORKING
+
         self.init_dist = 200
         scale_distance_node = mc.createNode(
             'distanceBetween', n='{}_{}_distanceBetween'.format(self.prefix, self.rigType))
@@ -709,30 +785,31 @@ class TwoBoneIKFK(object):  # not working
         self.create_guides()
 
     def build_joints(self):
+
         self.createHierarchy()
         self.createJoints()
         self.orientationWarning()
 
     def build_rig(self):
+
         self.ikfkProcessdure()
         self.create_fk_controls()
         self.create_ik_controls()
         self.create_pole_target()
-        self.create_asset_and_atributes()
+        self.create_asset_and_attributes()
         self.make_connections()
         # FIXME self.IKFK_snap_expression()
         # TODO: self.create_twist_joints()
         # TODO: self.create_bend_joints()
         # TODO: self.create_stretch()
 
-        # Mirror the joint on the YZ plain from the center of the world
-
+        # If mirror is set to 1, mirror the instance across the YZ plain.
         if self.mirror == 1:
-            # checking the prefix name
+
+            # Throw an error if anyhting other than 'L' equal self.prefix
             if self.prefix == 'L':
                 pass
             else:
-                # If anything other that 'L' is the prefix, throw an error
                 om.MGlobal_displayError(
                     'IKFK Tool: mirroring only supported for left (L) to right (R)')
                 return
@@ -744,24 +821,12 @@ class TwoBoneIKFK(object):  # not working
             # start building the mirror
             self.createHierarchy(mirroring=1)
 
-            mc.select(cl=1)
-            dummy_root_joint = mc.joint(n='{}_{}_mirror_dummie_{}'.format(
-                self.side, self.rigType, self.JOINT))
-            mc.parent(self.bind_joints[0], dummy_root_joint)
-            mirrored_joints = mc.mirrorJoint(
-                self.bind_joints[0], myz=True, mb=True, searchReplace=['L_', 'R_'])
-            mc.parent(self.bind_joints[0], '{}_{}_{}_{}'.format(
-                self.old_prefix, self.rigType, self.JOINT, self.GROUP))
-
-            mc.parent(mirrored_joints[0], '{}_{}_{}_{}'.format(
-                self.prefix, self.rigType, self.JOINT, self.GROUP))
-            mc.delete(dummy_root_joint)
-
+            self.mirror_joints()
             self.ikfkProcessdure(mirroring=1)
             self.create_fk_controls()
             self.create_ik_controls()
             self.create_pole_target()
-            self.create_asset_and_atributes()
+            self.create_asset_and_attributes()
             self.make_connections()
 
             self.prefix = self.old_prefix
