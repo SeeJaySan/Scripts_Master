@@ -25,6 +25,9 @@ for module_name in list(sys.modules.keys()):
 
     if top_module == 'ToolOps_charaterTemplate':
         importlib.reload((sys.modules[module_name]))
+
+    if top_module == 'ToolOps_BatchGeoExporter':
+        importlib.reload((sys.modules[module_name]))
         
 # making sure the path is correct so we can import        
 if path not in sys.path:
@@ -35,10 +38,12 @@ import rigOps_createContols
 import ArmOps_IKFKSwitch
 import rigOps_Mirror
 import ToolOps_charaterTemplate
+import ToolOps_BatchGeoExporter
 
 print ('LOADED: ' + str(rigOps_createContols))
 print ('LOADED: ' + str(ArmOps_IKFKSwitch))
 print ('LOADED: ' + str(rigOps_Mirror))
+print ('LOADED: ' + str(ToolOps_BatchGeoExporter))
 print ('LOADED: ' + str(ToolOps_charaterTemplate))
 
 print ('\n-------------------------------------------------Tools------------------------------------------------|')
@@ -47,4 +52,5 @@ print ('\nrigOps_createContols -- rigOps_createContols.rigOps_createContols()\n'
 print ('ArmOps_IKFKSwitch -- ArmOps_IKFKSwitch.ArmOps_IKFKSwitch(side="L")\n')
 print ('rigOps_Mirror -- rigOps_Mirror.rigOps_Mirror(mirrorbehaviour = True)\n')
 print ('ToolOps_charaterTemplate -- ToolOps_charaterTemplate.ToolOps_charaterTemplate(charactername = "template")\n')
+print ('ToolOps_BatchGeoExporter -- ToolOps_BatchGeoExporter.ToolOps_BatchGeoExporter()\n')
 print ('------------------------------------------------------------------------------------------------------|')
