@@ -1,2 +1,2 @@
-# rigging
- rigging tools within Maya
+# Script Master File
+Tools and scripts in Maya
