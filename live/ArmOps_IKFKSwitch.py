@@ -139,7 +139,7 @@ def ArmOps_IKFKSwitch(side = 'L'):
         name), sol='ikRPsolver', sj=ikjoints1, ee=ikjoints3)[0]
 
     # Create Control
-    IKR_wrist_control = mc.curve(n='{}_ik_control'.format(
+    IKR_wrist_control = mc.curve(n='{}_ik_CON'.format(
         name), d=1, p=[[-0.989623460780981, 1.0031016006564133, 1.0031016006564133],
                     [-0.989623460780981, 1.0031016006564133, -1.0031016006564133],
                     [-0.989623460780981, -1.0031016006564133, -1.0031016006564133],
@@ -156,21 +156,37 @@ def ArmOps_IKFKSwitch(side = 'L'):
                     [0.989623460780981, -1.0031016006564133, -1.0031016006564133],
                     [0.989623460780981, 1.0031016006564133, -1.0031016006564133],
                     [0.989623460780981, 1.0031016006564133, 1.0031016006564133]])
-
-    # move control
-    mc.xform(IKR_wrist_control, t=BN3_pos, ws=True)
-    mc.makeIdentity(IKR_wrist_control, a=1)
-    mc.delete(IKR_wrist_control, ch=1)
+    
+    # ik rotate control creation
+    ik_rotate_control = mc.circle(n='{}_ik_rotate_CON'.format(
+        name), nr=[1, 0, 0], sw=360, r=controlerSize/0.9)[0]
+    ik_rotate_ik_rotate_control_grp = mc.group(n = ik_rotate_control + '_grp')
 
     # Parenting
+    mc.xform(IKR_wrist_control, t=BN3_pos, ws=True)
+    mc.xform(ik_rotate_ik_rotate_control_grp, m=BN3_mat, ws=True)
+    mc.makeIdentity(IKR_wrist_control, t = True, a = True)
     mc.parent(IKR_Handle, IKR_wrist_control)
     mc.parent(IKR_wrist_control, IKR_GRP)
+    mc.parent(ik_rotate_ik_rotate_control_grp, IKR_GRP)
     mc.parent(IKR_GRP, rigGroup)
 
+    mc.parentConstraint(IKR_wrist_control, ik_rotate_ik_rotate_control_grp, mo = 1)
+    
+    controlList.append(IKR_wrist_control)
+    controlList.append(ik_rotate_control)
+    
     # Orient constraint to the ik wrist
 
-    mc.orientConstraint(IKR_wrist_control, ikjoints3, mo=1)
+    mc.orientConstraint(ik_rotate_control, ikjoints3, mo=1)
+    
+    mc.setAttr(IKR_wrist_control + '.rx', l=True)
+    mc.setAttr(IKR_wrist_control + '.ry', l=True)
+    mc.setAttr(IKR_wrist_control + '.rz', l=True)
 
+    mc.setAttr(ik_rotate_control + '.tx', l=True)
+    mc.setAttr(ik_rotate_control + '.ty', l=True)
+    mc.setAttr(ik_rotate_control + '.tz', l=True)
 
     # Create Blend Colors
 
@@ -246,10 +262,10 @@ def ArmOps_IKFKSwitch(side = 'L'):
     for i in controlList, blenderList:
 
         mc.container(arm_attributes_asset, edit=True, addNode=i)
-    mc.container(arm_attributes_asset, edit=True, addNode=IKR_wrist_control)
 
     # Publish name 'IKFK Switch'
     mc.container(arm_attributes_asset, e=True, pn=('IKFK_Switch'))
+
 
     # Bind ikfk attribute from the group to the container asset
     mc.container(arm_attributes_asset, e=True, ba=(
@@ -315,7 +331,7 @@ def ArmOps_IKFKSwitch(side = 'L'):
         mc.parent(pv_control, pv_group)
         mc.move(pos.x, pos.y, pos.z, pv_group)
         mc.poleVectorConstraint(pv_control, IKR)
-        mc.parent(pv_group, rigGroup)
+        mc.parent(pv_group, IKR_GRP)
         mc.container(arm_attributes_asset, edit=True, addNode=pv_control)
 
     # Get pole vector position
@@ -347,3 +363,18 @@ def ArmOps_IKFKSwitch(side = 'L'):
 
 
     get_pole_vec_pos(root_joint_pos, mid_joint_pos, end_joint_pos)
+    
+    print(topnode)
+    
+    # Visiblity connections
+    
+    arm_condition = mc.shadingNode('condition', au = True, n = '{}_Arm_condition'.format(name))
+
+    mc.connectAttr(ikfk_attributes_Grp + '.IKFK_Switch', arm_condition + '.firstTerm')
+    mc.connectAttr(arm_condition + '.outColor.outColorR', topnode[1] + '.visibility')
+    mc.connectAttr(arm_condition + '.outColor.outColorG', IKR_GRP + '.visibility')
+    
+    mc.setAttr(arm_condition + '.colorIfTrueR', 0)
+    mc.setAttr(arm_condition + '.colorIfTrueG', 1)
+    mc.setAttr(arm_condition + '.colorIfFalseR', 1)
+    mc.setAttr(arm_condition + '.colorIfFalseG', 0)

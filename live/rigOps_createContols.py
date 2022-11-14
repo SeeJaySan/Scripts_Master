@@ -20,7 +20,7 @@ def rigOps_createContols():
             namereplace = 'FK_JNT'
         '''
         con = mc.circle(n=i.replace(namereplace, 'CON'), nr=[1, 0, 0], sw=360)
-        sdkgrp = mc.group(n = i.replace(namereplace, 'SDK_GRP'))
+        #sdkgrp = mc.group(n = i.replace(namereplace, 'SDK_GRP'))
         offgrp = mc.group(n=i.replace(namereplace, 'OFF_GRP'))
         grp = mc.group(n=i.replace(namereplace, 'GRP'))
         const = mc.parentConstraint(i, grp, mo=0)

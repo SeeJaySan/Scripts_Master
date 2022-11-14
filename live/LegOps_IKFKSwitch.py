@@ -19,12 +19,12 @@ from maya import OpenMaya as om
 from maya import OpenMayaUI as omui
 
 rigType = 'Leg'
-side = 'L'
-name = side + rigType
+side = ''
 controlerSize = 6
 
-def LegOps_IKFKSwitch():
+def LegOps_IKFKSwitch(side = 'L'):
     rigGroup = mc.group(em=True, n='{}_Leg_Grp'.format(side))
+    name = side + rigType
 
     # getting xform data from bind joints
     xform0 = mc.xform('{}_Thigh_BN_JNT'.format(side), q=True, m=True, ws=True)
@@ -122,7 +122,7 @@ def LegOps_IKFKSwitch():
         n='{}_Leg_IKR'.format(side), sol='ikRPsolver', sj='{}_Thigh_BN_JNT'.format(side).replace('BN', 'IK'), ee='{}_Ankle_BN_JNT'.format(side).replace('BN', 'IK'))[0]
 
     # Create Control
-    IKR_ankle_control = mc.curve(n='{}_Leg_ik_control'.format(
+    IKR_ankle_control = mc.curve(n='{}_Leg_ik_CON'.format(
         side), d=1, p=[[-0.989623460780981, 1.0031016006564133, 1.0031016006564133],
                     [-0.989623460780981, 1.0031016006564133, -1.0031016006564133],
                     [-0.989623460780981, -1.0031016006564133, -1.0031016006564133],
@@ -139,16 +139,38 @@ def LegOps_IKFKSwitch():
                     [0.989623460780981, -1.0031016006564133, -1.0031016006564133],
                     [0.989623460780981, 1.0031016006564133, -1.0031016006564133],
                     [0.989623460780981, 1.0031016006564133, 1.0031016006564133]])
+    # ik rotate control creation
+    ik_rotate_control = mc.circle(n='{}_ik_rotate_CON'.format(
+        name), nr=[1, 0, 0], sw=360, r=controlerSize/0.9)[0]
+    ik_rotate_ik_rotate_control_grp = mc.group(n = ik_rotate_control + '_grp')
 
     # Parenting
-    mc.xform(IKR_ankle_control, m=xform2, ws=True)
+    mc.xform(IKR_ankle_control, t=BN2_pos, ws=True)
+    mc.xform(ik_rotate_ik_rotate_control_grp, m=BN2_mat, ws=True)
+    mc.makeIdentity(IKR_ankle_control, t = True, a = True)
     mc.parent(IKR_Handle, IKR_ankle_control)
     mc.parent(IKR_ankle_control, IKR_GRP)
+    mc.parent(ik_rotate_ik_rotate_control_grp, IKR_GRP)
     mc.parent(IKR_GRP, rigGroup)
 
-    # Orient constraint to the ik wrist
+    mc.parentConstraint(IKR_ankle_control, ik_rotate_ik_rotate_control_grp, mo = 1)
 
-    mc.orientConstraint(IKR_ankle_control, '{}_Ankle_BN_JNT'.format(side).replace('BN', 'IK'))
+    controlList.append(IKR_ankle_control)
+    controlList.append(ik_rotate_control)
+
+    # Orient constraint to the ik ankle
+
+    mc.orientConstraint(ik_rotate_control, '{}_Ankle_BN_JNT'.format(side).replace('BN', 'IK'), mo = 1)
+
+    
+    
+    mc.setAttr(IKR_ankle_control + '.rx', l=True)
+    mc.setAttr(IKR_ankle_control + '.ry', l=True)
+    mc.setAttr(IKR_ankle_control + '.rz', l=True)
+
+    mc.setAttr(ik_rotate_control + '.tx', l=True)
+    mc.setAttr(ik_rotate_control + '.ty', l=True)
+    mc.setAttr(ik_rotate_control + '.tz', l=True)
 
 
     # Create Blend Colors
@@ -164,6 +186,7 @@ def LegOps_IKFKSwitch():
     blenderList.append(root_blend_color)
     blenderList.append(mid_blend_color)
     blenderList.append(end_blend_color)
+    
 
 
     # Connecting IKFK blender root
@@ -191,12 +214,13 @@ def LegOps_IKFKSwitch():
         ('{}.output'.format(end_blend_color)), '{}.rotate'.format('{}_Ankle_BN_JNT'.format(side).replace('BN', 'DRIVER')))
 
     # Create Parent Constraints--------------------------------------------------------|
+    
 
     #mc.parentConstraint('{}_Thigh_BN_JNT'.format(side).replace('BN', 'FK'), '{}_Thigh_BN_JNT'.format(side), mo=True)
     mc.parentConstraint('{}_Thigh_BN_JNT'.format(side).replace('BN', 'DRIVER'), '{}_Thigh_BN_JNT'.format(side), mo=True)
     mc.parentConstraint('{}_Calf_BN_JNT'.format(side).replace('BN', 'DRIVER'), '{}_Calf_BN_JNT'.format(side), mo=True)
     mc.parentConstraint('{}_Ankle_BN_JNT'.format(side).replace('BN', 'DRIVER'), '{}_Ankle_BN_JNT'.format(side), mo=True)
-
+    
     # Create Container----------------------------------------------------------------|
 
     ikfk_attributes_Grp = mc.createNode(
@@ -217,13 +241,12 @@ def LegOps_IKFKSwitch():
     mc.connectAttr(IKFK_reverse + '.input.inputX', root_blend_color + '.blender')
     mc.connectAttr(IKFK_reverse + '.input.inputX', mid_blend_color + '.blender')
     mc.connectAttr(IKFK_reverse + '.input.inputX', end_blend_color + '.blender')
-
+    
     # Add controls to the asset
 
     for i in controlList, blenderList:
 
         mc.container(arm_attributes_asset, edit=True, addNode=i)
-    mc.container(arm_attributes_asset, edit=True, addNode=IKR_ankle_control)
 
     # Publish name 'IKFK Switch'
     mc.container(arm_attributes_asset, e=True, pn=('IKFK_Switch'))
@@ -232,7 +255,7 @@ def LegOps_IKFKSwitch():
     mc.container(arm_attributes_asset, e=True, ba=(
         ikfk_attributes_Grp + '.IKFK_Switch', 'IKFK_Switch'))
 
-
+    
     # Creating pole target--------------------------------------------------------------------|
 
     distance = 1.0
@@ -324,8 +347,20 @@ def LegOps_IKFKSwitch():
 
 
     get_pole_vec_pos(root_joint_pos, mid_joint_pos, end_joint_pos)
-
-    mc.parentConstraint('Pelvis_CON', rigGroup, mo = 1)
+    if bool(mc.objExists('Pelvis_CON')):
+        mc.parentConstraint('Pelvis_CON', rigGroup, mo = 1)
     mc.addAttr('{}_Leg_PV_CON'.format(side), ln='SpaceSwitch', at='enum', en='world:leg:pelvis')
     mc.setAttr('{}_Leg_PV_CON.SpaceSwitch'.format(side), e=1, k=1)
-    mc.parentConstraint('World')
+
+    # Visiblity connections
+    
+    leg_condition = mc.shadingNode('condition', au = True, n = '{}_leg_condition'.format(name))
+
+    mc.connectAttr(ikfk_attributes_Grp + '.IKFK_Switch', leg_condition + '.firstTerm')
+    mc.connectAttr(leg_condition + '.outColor.outColorR', topnode[0] + '.visibility')
+    mc.connectAttr(leg_condition + '.outColor.outColorG', IKR_GRP + '.visibility')
+    
+    mc.setAttr(leg_condition + '.colorIfTrueR', 0)
+    mc.setAttr(leg_condition + '.colorIfTrueG', 1)
+    mc.setAttr(leg_condition + '.colorIfFalseR', 1)
+    mc.setAttr(leg_condition + '.colorIfFalseG', 0)
