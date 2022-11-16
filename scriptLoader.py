@@ -37,6 +37,9 @@ for module_name in list(sys.modules.keys()):
     if top_module == 'ToolOps_BatchGeoExporter':
         importlib.reload((sys.modules[module_name]))
 
+    if top_module == 'ToolOps_CharacterExporter':
+        importlib.reload((sys.modules[module_name]))
+
     #if top_module == 'FootOps_ReverseFoot':
         #importlib.reload((sys.modules[module_name]))
         
@@ -51,6 +54,7 @@ import LegOps_IKFKSwitch
 import rigOps_Mirror
 import ToolOps_charaterTemplate
 import ToolOps_BatchGeoExporter
+import ToolOps_CharacterExporter
 #import FootOps_ReverseFoot
 
 print ('LOADED: ' + str(rigOps_createContols))
@@ -59,6 +63,7 @@ print ('LOADED: ' + str(LegOps_IKFKSwitch))
 print ('LOADED: ' + str(rigOps_Mirror))
 print ('LOADED: ' + str(ToolOps_BatchGeoExporter))
 print ('LOADED: ' + str(ToolOps_charaterTemplate))
+print ('LOADED: ' + str(ToolOps_CharacterExporter))
 #print ('LOADED: ' + str(FootOps_ReverseFoot))
 
 print ('\n-------------------------------------------------Tools------------------------------------------------|')
@@ -70,4 +75,5 @@ print ('rigOps_Mirror -- rigOps_Mirror.rigOps_Mirror(mirrorbehaviour = True)\n')
 print ('ToolOps_charaterTemplate -- ToolOps_charaterTemplate.ToolOps_charaterTemplate(charactername = "template")\n')
 print ('ToolOps_BatchGeoExporter -- ToolOps_BatchGeoExporter.ToolOps_BatchGeoExporter()\n')
 print ('FootOps_ReverseFoot -- FootOps_ReverseFoot.FootOps_ReverseFoot(self.side = "L")\n')
+print ('ToolOps_CharacterExporter -- ToolOps_CharacterExporter.ToolOps_CharacterExporter()\n')
 print ('------------------------------------------------------------------------------------------------------|')
