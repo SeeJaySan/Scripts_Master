@@ -22,7 +22,7 @@ rigType = 'Leg'
 side = ''
 controlerSize = 6
 
-def LegOps_IKFKSwitch(side = 'L'):
+def RigOp_LegIKFKSwitch(side = 'L'):
     rigGroup = mc.group(em=True, n='{}_Leg_Grp'.format(side))
     name = side + rigType
 

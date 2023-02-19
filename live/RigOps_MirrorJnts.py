@@ -3,7 +3,7 @@ import maya.mel as mel
 from maya import OpenMaya as om
 from maya import OpenMayaUI as omui
 
-def rigOps_Mirror(mirrorbehaviour = True):
+def RigOps_MirrorJnts(mirrorbehaviour = True):
     selList = []
 
     sel = mc.ls(sl=1)

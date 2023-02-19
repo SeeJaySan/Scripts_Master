@@ -4,7 +4,7 @@ from maya import OpenMaya as om
 from maya import OpenMayaUI as omui
 
 
-def ToolOps_charaterTemplate(charactername = 'template'):
+def ToolOps_CharaterTemplate(charactername = 'template'):
     mc.createNode('transform', n='GEO')
     mc.createNode('transform', n='SKL')
     mc.createNode('transform', n='RIG')

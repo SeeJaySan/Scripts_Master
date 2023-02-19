@@ -2,7 +2,7 @@ import maya.cmds as mc
 import maya.mel as mel
 
 
-def rigOps_createContols():
+def RigOps_CreateContols():
     
     sel = mc.ls(sl=True)
 

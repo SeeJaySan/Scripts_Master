@@ -1,6 +1,6 @@
 from maya import cmds as mc
 
-path = r'C:\Users\CJ Nowacek\Dropbox\My PC (DESKTOP-7N81176)\Documents\~CJ\[BFA_Runaway]\Artwork\export'
+path = r'C:\Dropbox\BFA\Artwork\Character\Robin\RIG'
 
 fileName = 'SKL_Robin'
 

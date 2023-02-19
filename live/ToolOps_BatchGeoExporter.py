@@ -9,7 +9,7 @@ __status__ = "Production"
 import maya.cmds as mc
 import os
 
-#TODO add different export types
+#DONE add different export types - added fb, obj, and stl - 11/13/2022
 #TODO add options for animation?
 
 class ToolOps_BatchGeoExporter(object):
@@ -102,4 +102,4 @@ class ToolOps_BatchGeoExporter(object):
             if hasParent:
                 mc.parent(i, parentNode)
                                    
-myWindow = ToolOps_BatchGeoExporter()
+#myWindow = ToolOps_BatchGeoExporter()

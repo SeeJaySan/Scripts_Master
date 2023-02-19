@@ -2,7 +2,7 @@ import sys
 import importlib
 
 #path of the module
-path = r'C:\Users\CJ Nowacek\Dropbox\My PC (DESKTOP-7N81176)\Documents\~CJ\Scipts__Maya\Git\rigging'
+path = r'C:\Dropbox\Scripts\Scripts_Master\other\cn_rigging_scripts'
 
 for module_name in sys.modules.keys():
     top_module = module_name.split('.')[0]

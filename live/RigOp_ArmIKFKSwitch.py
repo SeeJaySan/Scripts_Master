@@ -18,7 +18,7 @@ rigType = 'Arm'
 side = ''
 controlerSize = 6
 
-def ArmOps_IKFKSwitch(side = 'L'):
+def RigOp_ArmIKFKSwitch(side = 'L'):
     
     if 'L' in side:
         pass
