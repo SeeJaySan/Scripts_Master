@@ -1,5 +1,6 @@
 import sys
 import os
+import subprocess
 import importlib
 import maya.cmds as mc
 import maya.mel as mel
@@ -26,7 +27,19 @@ class BfaOps_AnimExporter(object):
         mc.separator(height = 20)
 
         self.prep_bn = mc.button( label='Prep', command=self.BfaOps_AnimExportPrep)
-        self.export_bn = mc.button( label='Export', command=self.exportAnimations)
+        mc.separator(height = 20)
+        mc.text('set time range')
+        mc.separator(height = 10)
+        self.minTime_bn = mc.button( label='Set Min Time', command=self.setMinTime)
+        self.maxTime_bn = mc.button( label='Set Max Time', command=self.setMaxTime)
+        mc.separator(height = 20)
+        mc.text('Exporting')
+        mc.separator(height = 10)
+        self.exportSelected_bn = mc.button( label='First Time Export', command=self.exportSelection, enable = False)
+        self.export_bn = mc.button( label='Export', command=self.exportAnimations, enable = False)
+        mc.separator(height = 20)
+        mc.text('restarting file')
+        mc.separator(height = 10)
         self.reopen_bn = mc.button( label='Reopen', command=self.restartFile)
         
         mc.separator(height = 20)
@@ -34,7 +47,11 @@ class BfaOps_AnimExporter(object):
         #display new window
         mc.showWindow()
 
-    def BfaOps_AnimExportPrep(self, *args):
+    def BfaOps_AnimExportPrep(self, *args):        
+        
+        #prepping
+        
+        mel.eval('file -save;')
         
         mel.eval('namespace -mergeNamespaceWithRoot -removeNamespace "SKL_robin";')
 
@@ -58,8 +75,17 @@ class BfaOps_AnimExporter(object):
         mc.parent(this1, w = 1)
 
         mc.select('Root', hi = 1)
+        
+        mc.button(self.exportSelected_bn, e = True, enable = True)
+        mc.button(self.export_bn, e = True, enable = True)
+        
+        mc.button(self.prep_bn, e = True, enable = False)
+        mc.button(self.minTime_bn, e = True, enable = False)
+        mc.button(self.maxTime_bn, e = True, enable = False)
 
     def exportAnimations(self, *args):
+        
+        # exporting
         
         mc.select('Root', hi = 1)
 
@@ -74,8 +100,45 @@ class BfaOps_AnimExporter(object):
 
 
         #exporting
-        mel.eval('file -force -options "v=0;" -typ "FBX export" -pr -es {0};'.format(new_path))
+        #mel.eval('file -force -options "v=0;" -typ "FBX export" -pr -es {0};'.format(new_path))
+        
+        min = mc.playbackOptions(q = True, min = True)
+        max = mc.playbackOptions(q = True, max = True)
+        
+        mel.eval('FBXResetExport')
+        #mel.eval('FBXProperties')
+        mel.eval('FBXExportBakeComplexAnimation -v 1')
+        mel.eval('FBXExportBakeComplexStart -v 1'.format (min))
+        mel.eval('FBXExportBakeComplexEnd -v {0}'.format (max))
+        mel.eval('FBXExportBakeComplexEnd -v {0}'.format (max))
+        mel.eval('FBXExportAnimationOnly -v 1')
+        mel.eval('FBXExportAnimationOnly -v 1')
+        
+        mc.select('Root', hi = 1)
+        mel.eval('FBXExport -f {0} -s'.format(new_path))
     
     def restartFile(self, *args):
         filepath = mc.file(q=True, sn=True)
         mc.file(filepath, open=True, force = True)
+        mc.button(self.exportSelected_bn, e = True, enable = False)
+        mc.button(self.export_bn, e = True, enable = False)
+        mc.button(self.prep_bn, e = True, enable = True)
+        mc.button(self.minTime_bn, e = True, enable = True)
+        mc.button(self.maxTime_bn, e = True, enable = True)
+        
+    def setMinTime(self, *args):
+
+        this = mc.currentTime(q = True)
+
+        mc.playbackOptions(min = this, ast = this)
+        
+    def setMaxTime(self, *args):
+
+        this = mc.currentTime(q = True)
+
+        mc.playbackOptions(max = this, aet = this)
+        
+    def exportSelection(self, *args):
+        
+        mel.eval('ExportSelection;')
+        

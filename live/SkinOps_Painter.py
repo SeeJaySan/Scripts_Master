@@ -95,21 +95,21 @@ class SkinOps_Painter(object):
         
         mc.separator(height = 20)
         self.paintToolMenu_bn = mc.button( label='Paint Tool Menu', command=self.paintToolMenu)
-        
+        self.componentEditor_bn = mc.button( label='Component Editor', command=self.componentEditor)
+
         mc.separator(height = 20)
         self.changeToObjectMode_bn = mc.button( label='Object Mode', command=self.changeToObjectMode)
-        self.changeToComponentMode_bn = mc.button( label='Component Mode', command=self.changeToComponentMode)
-        self.add_bn = mc.button( label='Paint Mode: Add', command=self.add)        
-        self.smooth_bn = mc.button( label='Paint Mode: Smooth', command=self.smooth)
-        
-        mc.separator(height = 20)
-        self.selectTool_bn = mc.button( label='Box Select', command=self.selectTool)        
-        self.lassoTool_bn = mc.button( label='Lasso Select', command=self.lassoTool)
-        
+        self.changeToComponentModeVerts_bn = mc.button( label='Select Verts', command=self.changeToComponentModeVerts)
+        self.changeToComponentModeLine_bn = mc.button( label='Select Edges', command=self.changeToComponentModeLine)
         mc.separator(height = 20)
         self.growSelection_bn = mc.button( label='Grow', command=self.growSelection)
         self.shrinkSelection_bn = mc.button( label='Shrink', command=self.shrinkSelection)
-        
+        mc.separator(height = 20)
+        self.add_bn = mc.button( label='Paint Mode: Add', command=self.add)        
+        self.smooth_bn = mc.button( label='Paint Mode: Smooth', command=self.smooth)   
+        mc.separator(height = 20)
+        self.selectTool_bn = mc.button( label='Box Select', command=self.selectTool)        
+        self.lassoTool_bn = mc.button( label='Lasso Select', command=self.lassoTool)           
         mc.separator(height = 20)
         self.selectOnlyGeo_bn = mc.button( label='Select only Geo', command=self.selectOnlyGeo)    
         self.selectOnlyJNT_bn = mc.button( label='Select only Jnts', command=self.selectOnlyJNT)    
@@ -118,6 +118,7 @@ class SkinOps_Painter(object):
         mc.separator(height = 20)    
         self.copy_bn = mc.button( label='copy', command=self.copy)
         self.paste_bn = mc.button( label='paste', command=self.paste)
+        self.hammer_bn = mc.button( label='hammer', command=self.hammer)
         
         mc.separator(height = 20)    
         self.resetControl_bn = mc.button( label='resetControl', command=self.resetControl)
@@ -129,7 +130,6 @@ class SkinOps_Painter(object):
         mc.showWindow()
     
     def paintToolMenu(self, *args):
-        
         sel = mc.ls(sl = 1)[0]
         mel.eval('ArtPaintSkinWeightsToolOptions; paintSkinWeightsChangeSelectMode {0};'.format(sel))
         mel.eval('setSelectMode components Components; selectType -smp 0 -sme 0 -smf 0 -smu 0 -pv 0 -pe 0 -pf 0 -puv 0 -meshComponents 1; HideManipulators;')
@@ -145,19 +145,41 @@ class SkinOps_Painter(object):
         mel.eval('setComponentPickMask "Marker" false;')
         mel.eval('setComponentPickMask "Other" false;')
         mel.eval('setComponentPickMask "Hull" false;')
+        mel.eval('artAttrCtx -e -useColorRamp true artAttrSkinContext ; artisanUpdateRampColorEnable;')
+
+    def componentEditor(self, *args):
+        mel.eval ('ComponentEditor;')
         
     def changeToObjectMode(self, *args):
         mel.eval('changeSelectMode -object;')
         
-    def changeToComponentMode(self, *args):
-        mel.eval ('artAttrSkinSetPaintMode 0')
+    def changeToComponentModeVerts(self, *args):
+        mel.eval('SelectVertexMask;')
+        mel.eval('artAttrSkinSetPaintMode 0')
         mel.eval('changeSelectMode -component;')
         mel.eval('setComponentPickMask "Point" true;')
         mel.eval('selectType -cv false;')
         mel.eval('selectType -latticePoint false;')
-        mel.eval('selectType -particle true;')
+        mel.eval('selectType -particle false;')
         mel.eval('setComponentPickMask "ParmPoint" false;')
         mel.eval('setComponentPickMask "Line" false;')
+        mel.eval('setComponentPickMask "Facet" false;')
+        mel.eval('setComponentPickMask "Hull" false;')
+        mel.eval('setComponentPickMask "Pivot" false;')
+        mel.eval('setComponentPickMask "Marker" false;')
+        mel.eval('setComponentPickMask "Other" false;')
+        mel.eval('setComponentPickMask "Hull" false;')
+        
+    def changeToComponentModeLine(self, *args):
+        mel.eval('SelectEdgeMask;')
+        mel.eval ('artAttrSkinSetPaintMode 0')
+        mel.eval('changeSelectMode -component;')
+        mel.eval('setComponentPickMask "Point" false;')
+        mel.eval('selectType -cv false;')
+        mel.eval('selectType -latticePoint false;')
+        mel.eval('selectType -particle false;')
+        mel.eval('setComponentPickMask "ParmPoint" false;')
+        mel.eval('setComponentPickMask "Line" true;')
         mel.eval('setComponentPickMask "Facet" false;')
         mel.eval('setComponentPickMask "Hull" false;')
         mel.eval('setComponentPickMask "Pivot" false;')
@@ -172,6 +194,7 @@ class SkinOps_Painter(object):
         mel.eval('select `ls -sl`;PolySelectTraverse 2;select `ls -sl`;')
         
     def add(self, *args):
+        self.paintToolMenu()
         mel.eval('selectType -cv false;')
         mel.eval('selectType -latticePoint false;')
         mel.eval('selectType -particle true;') 
@@ -193,6 +216,7 @@ class SkinOps_Painter(object):
         mel.eval ('artSkinInflListChanged artAttrSkinPaintCtx;')
              
     def smooth(self, *args):
+        self.paintToolMenu()
         mel.eval ('artAttrSkinSetPaintMode 1')
         mel.eval ('artAttrPaintOperation artAttrSkinPaintCtx Smooth')     
                 
@@ -223,11 +247,16 @@ class SkinOps_Painter(object):
         mel.eval ('artAttrSkinWeightCopy;')
                           
     def paste(self, *args):
-
         mel.eval ('artAttrSkinWeightPaste;')
+    def hammer(self, *args):
+        mel.eval ('weightHammerVerts;')
                           
     def resetControl(self, *args):
 
+        mesh = mc.ls(sl = 1)
+        
+        mel.eval ('SelectAllNURBSCurves;')
+        
         mel.eval ('''string $ctrlName[] = `ls -sl`;
             for ($con in $ctrlName){
             catchQuiet(`setAttr ($con + ".translateX") 0`);
@@ -241,6 +270,11 @@ class SkinOps_Painter(object):
             catchQuiet(`setAttr ($con + ".scaleZ") 1`);
             }
             ''')
+        
+        mc.select(mesh)
+        self.paintToolMenu()
+        self.add()
+            
     def mirror(self, *args):
         
         mesh = mc.ls(sl = 1)
@@ -262,6 +296,11 @@ class SkinOps_Painter(object):
             ''')
         
         mc.select(mesh)
+
+        mel.eval ('MirrorSkinWeightsOptions;')
+        mel.eval ('performMirrorSkinWeights true;')
+
+
         
         
         
