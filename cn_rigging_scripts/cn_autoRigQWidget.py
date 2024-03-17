@@ -6,6 +6,7 @@ from shiboken2 import wrapInstance
 
 # IMPORT maya
 from maya import cmds as mc
+from maya import cmds
 from maya import mel as mel
 from maya import OpenMaya as om
 from maya import OpenMayaUI as omui
@@ -28,103 +29,135 @@ def maya_main_window():
         return wrapInstance(long(main_window_ptr), QtWidgets.QWidget)
 
 
-class CustomTabWidget(MayaQWidgetDockableMixin, QtWidgets.QWidget):
-    
-        # Initiallizing window Variables
-    def __init__(self, parent=maya_main_window()):
-        super(CustomTabWidget, self).__init__(parent)
-        
-        self.setWindowTitle("MCP_01")
-        
-    def create_widgets(self):
-        self.tab_bar = QtWidgets.QTabBar()
-    
-    def create_layout(self):
-        main_layout = QtWidgets.QVBoxLayout(self)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.addWidget(self.tab_bar)
-    
-    def create_connections(self):
-        pass
-    
-    def addTab(self, widget, label):
-        self.tab_bar.addTab(label)
-        
-#-----------------------------------------------------------------------------------
-        
-class TabWidgetDialog(QtWidgets.QDialog):
-    
-    # Initiallizing window Variables
-    def __init__(self, parent=maya_main_window()):
-        super(TabWidgetDialog, self).__init__(parent)
-        
-        self.setWindowTitle("this")
-    
-        self.create_widgets()
-        self.create_layout()
-        self.create_connections()
-        
-        
-    def create_widgets(self):
-        self.label_wdg = LabelWidget()
-        self.buttons_wdg = ButtonWidget()
-        self.others_wdg = OtherWidget()
-        
-        self.tab_widget = CustomTabWidget()
-        self.tab_widget.addTab(self.label_wdg, "Labels")
-        self.tab_widget.addTab(self.buttons_wdg, "Labels")
-        self.tab_widget.addTab(self.others_wdg, "Labels")
-        
-        
-        
-    def create_layout(self):
-        layout =  QtWidgets.QVBoxLayout(self)
-        layout.addWidget(self.tab_widget)
-        layout.addStretch()
-    
-    def create_connections(self):
-        pass
-
-#-----------------------------------------------------------------------------------
-            
 class LabelWidget(QtWidgets.QWidget):
-    
+
     # Initiallizing window Variables
     def __init__(self, parent=maya_main_window()):
         super(LabelWidget, self).__init__(parent)
-        
+
         layout = QtWidgets.QVBoxLayout(self)
         layout.addWidget(QtWidgets.QLabel("this1"))
         layout.addWidget(QtWidgets.QLabel("this2"))
         layout.addWidget(QtWidgets.QLabel("this3"))
         layout.addWidget(QtWidgets.QLabel("this4"))
-        
+
+
 class ButtonWidget(QtWidgets.QWidget):
-    
+
     # Initiallizing window Variables
     def __init__(self, parent=maya_main_window()):
         super(ButtonWidget, self).__init__(parent)
         
-        layout = QtWidgets.QVBoxLayout(self)
-        layout.addWidget(QtWidgets.QPushButton("this1"))
-        layout.addWidget(QtWidgets.QPushButton("this2"))
-        layout.addWidget(QtWidgets.QPushButton("this3"))
-        layout.addWidget(QtWidgets.QPushButton("this4"))    
+        #create widgets
         
+        self.button1 = QtWidgets.QPushButton('Create Guides')
+        
+        
+        
+        # layout
+
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.addWidget(QtWidgets.QLabel("this1"))
+        layout.addWidget(self.button1)
+        #layout.addWidget(QtWidgets.QPushButton("this2"))
+        #layout.addWidget(QtWidgets.QPushButton("this3"))
+        #layout.addWidget(QtWidgets.QPushButton("this4"))
+   #     layout.addWidget(QtWidgets.QPushButton("this1"))
+ #       layout.addWidget(QtWidgets.QPushButton("this2"))
+  #      layout.addWidget(QtWidgets.QPushButton("this3"))
+#        layout.addWidget(QtWidgets.QPushButton("this4"))
+
+
 class OtherWidget(QtWidgets.QWidget):
-    
+
     # Initiallizing window Variables
     def __init__(self, parent=maya_main_window()):
         super(OtherWidget, self).__init__(parent)
-        
+
         layout = QtWidgets.QVBoxLayout(self)
         layout.addWidget(QtWidgets.QLabel("this1"))
         layout.addWidget(QtWidgets.QPushButton("this2"))
         layout.addWidget(QtWidgets.QCheckBox("this3"))
         layout.addWidget(QtWidgets.QLineEdit("this4"))
+        
+# -----------------------------------------------------------------------------------
+# MayaQWidgetDockableMixin
     
-    
-    
+class CustomTabWidget(QtWidgets.QWidget):
+
+    # Initiallizing window Variables
+    def __init__(self, parent=maya_main_window()):
+        super(CustomTabWidget, self).__init__(parent)
+
+        #self.setWindowTitle("MCP_01")
+        #self.setMaximumSize(400, 250)
+        #self.setMinimumSize(243, 180)
+        
+        self.create_widgets()
+        self.create_layout()
+        self.create_connections()
+
+    def create_widgets(self):
+        pass
+
+    def create_layout(self):
+        pass
+
+    def create_connections(self):
+        pass
+
+    def addTab(self, widget, label):
+        pass
+
+# -----------------------------------------------------------------------------------
+
+#causes crashing on reload. Need a work around. Until then it won't be dockable
+# MayaQWidgetDockableMixin, 
+
+class TabWidgetDialog(QtWidgets.QDialog):
+
+    WINDOW_TITLE = "Custom Tab Widget Example"
+
+    def __init__(self, parent=maya_main_window()):
+        super(TabWidgetDialog, self).__init__(parent)
+
+        self.setWindowTitle(self.WINDOW_TITLE)
+        if cmds.about(ntOS=True):
+            self.setWindowFlags(self.windowFlags() ^ QtCore.Qt.WindowContextHelpButtonHint)
+        elif cmds.about(macOS=True):
+            self.setWindowFlags(QtCore.Qt.Tool)
+            
+        # getting rid of the question mark
+        self.setWindowFlag(QtCore.Qt.WindowContextHelpButtonHint, False)
+            
+
+        self.create_widgets()
+        self.create_layout()
+        self.create_connections()
+
+    def create_widgets(self):
+        self.labels_wdg = LabelWidget()
+        self.buttons_wdg = ButtonWidget()
+        self.others_wdg = OtherWidget()
+
+        self.tab_widget = QtWidgets.QTabWidget()
+        self.tab_widget.addTab(self.labels_wdg, "Labels")
+        self.tab_widget.addTab(self.buttons_wdg, "Buttons")
+        self.tab_widget.addTab(self.others_wdg, "Others")
+
+
+    def create_layout(self):
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.addWidget(self.tab_widget)
+        layout.addStretch()
+
+    def create_connections(self):
+        self.buttons_wdg.button1.clicked.connect(asdf)
+
+# -----------------------------------------------------------------------------------
+
+def asdf ():
+    print("hi")
 
 # UI creation
 class TwoBoneIKFKUI(QtWidgets.QWidget):
@@ -135,25 +168,24 @@ class TwoBoneIKFKUI(QtWidgets.QWidget):
 
         self.setWindowTitle("cn_Ikfk_Tool_v01")
         self.setWindowFlag(QtCore.Qt.WindowType.Window)
-        #self.setMaximumSize(400, 250)
+        # self.setMaximumSize(400, 250)
         self.setMaximumSize(600, 500)
         self.setMinimumSize(243, 180)
         self.setGeometry((1920/10)*7.05, 1080/2-240, 300, 190)
- 
+
         self.create_widgets()
         self.create_layout()
         self.create_connections()
 
         # getting rid of the question mark
-        #self.setWindowFlag(QtCore.Qt.WindowContextHelpButtonHint, False)
-        
+        # self.setWindowFlag(QtCore.Qt.WindowContextHelpButtonHint, False)
+
         '''
         if sys.version_info.major >= 3:
             return self.setWindowFlag(QtCore.Qt.WindowContextHelpButtonHint, False)
         else:
             return self.setWindowFlags(self.windowFlags() ^ QtCore.Qt.WindowContextHelpButtonHint)
         '''
-        
 
     # Creating widgets
     def create_widgets(self):
@@ -203,23 +235,18 @@ class TwoBoneIKFKUI(QtWidgets.QWidget):
         self.bend_ckb = QtWidgets.QCheckBox('Bend')
         # self.bend_ckb.setMaximumWidth(44)
         self.bend_ckb.setMinimumWidth(1000)
-        
+
         self.labels_wdg = Le
         self.labels_wdg = LabelWidget()
         self.labels_wdg = LabelWidget()
-        
+
         self.tab_widget = QtWidgets.QTableWidget()
         self.tab_widget = QtWidgets.QTableWidget()
-        
-        
-        
-        
 
         self.rig = TwoBoneIKFK()
-        
-        
 
     # Creating layouts
+
     def create_layout(self):
 
         # Create Sub Layouts
@@ -492,15 +519,15 @@ class TwoBoneIKFK(object):
         elbow_PC = mc.parentConstraint(self.mid_loc, self.elbow_loc_control)
 
         # lock incorrect second joint movements for IKFK
-        #mc.setAttr(self.elbow_loc_control + '.rx', lock=True)
-        #mc.setAttr(self.elbow_loc_control + '.rz', lock=True)
-        #mc.setAttr(self.elbow_loc_control + '.ty', lock=True)
+        # mc.setAttr(self.elbow_loc_control + '.rx', lock=True)
+        # mc.setAttr(self.elbow_loc_control + '.rz', lock=True)
+        # mc.setAttr(self.elbow_loc_control + '.ty', lock=True)
         mc.delete(elbow_PC)
 
         self.wrist_loc_control = mc.circle(
             name='{}_{}_{}_{}'.format(self.prefix, self.rigType, self.WRIST, self.GUIDE, self.CONTROL), r=2, nr=(1, 0, 0))[0]
         wrist_PC = mc.parentConstraint(self.end_loc, self.wrist_loc_control)
-        #mc.setAttr(self.wrist_loc_control + '.ty', lock=True)
+        # mc.setAttr(self.wrist_loc_control + '.ty', lock=True)
         mc.delete(wrist_PC)
 
         # parenting
@@ -1194,7 +1221,7 @@ class TwoBoneIKFK(object):
         mc.connectAttr(self.arm_control_vis_condition + '.outColor.outColorR',
                        self.pv_control + '.visibility')
 
-        mc.connectAttr(self.arm_control_vis_condition + '.outColor.outColorG', 
+        mc.connectAttr(self.arm_control_vis_condition + '.outColor.outColorG',
                        self.root_control + '.visibility')
         mc.connectAttr(self.arm_control_vis_condition + '.outColor.outColorG',
                        self.mid_control + '.visibility')
