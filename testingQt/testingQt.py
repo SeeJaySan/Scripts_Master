@@ -17,6 +17,20 @@ from rigging import jointCreateAndOrientatorModule as jCO
 # IMPORT Third-Party
 import zbw_controlShapes as zbw_con
 
+# getting scripts from live folder
+liveScriptsPath = r'C:\Users\cjnowacek\Desktop\important files\scripts\myScript\live'
+
+moduleNames = []
+
+dir_list = os.listdir(liveScriptsPath)
+for each in dir_list:
+    if each.endswith(".py"):
+        newName = each.split(".")[0]
+        moduleNames.append(newName)
+    else:
+        continue
+
+
 # Main maya window
 
 
@@ -39,30 +53,27 @@ class ButtonWidget(QtWidgets.QWidget):
 
         # create widgets
 
-        self.button1 = QtWidgets.QPushButton("Start")
-        self.button2 = QtWidgets.QPushButton("Aim")
-        # self.button3 = QtWidgets.QPushButton('Create')
+        self.script_cbx = QtWidgets.QComboBox()
+        self.run_btn = QtWidgets.QPushButton('Run')
 
         # layout
 
         layout = QtWidgets.QVBoxLayout(self)
-        layout.addWidget(self.button1)
-        layout.addWidget(self.button2)
-        # layout.addWidget(self.button3)
+        layout.addWidget(self.script_cbx)
+        layout.addWidget(self.run_btn)
 
 
 class TabWidgetDialog(QtWidgets.QDialog):
 
-    WINDOW_TITLE = "Custom Tab Widget Example"
+    WINDOW_TITLE = "Tools"
 
     def __init__(self, parent=maya_main_window()):
         super(TabWidgetDialog, self).__init__(parent)
 
         self.setWindowTitle(self.WINDOW_TITLE)
         if mc.about(ntOS=True):
-            self.setWindowFlags(
-                self.windowFlags() ^ QtCore.Qt.WindowContextHelpButtonHint
-            )
+            self.setWindowFlags(self.windowFlags() ^
+                                QtCore.Qt.WindowContextHelpButtonHint)
         elif mc.about(macOS=True):
             self.setWindowFlags(QtCore.Qt.Tool)
 
@@ -73,11 +84,19 @@ class TabWidgetDialog(QtWidgets.QDialog):
         self.create_layout()
         self.create_connections()
 
+        # fileMenu = mainMenu.addMenu("File")
+
     def create_widgets(self):
         self.buttons_wdg = ButtonWidget()
 
+        for each in moduleNames:
+
+            self.buttons_wdg.script_cbx.addItem("{0}".format(each))
+
         self.tab_widget = QtWidgets.QTabWidget()
-        self.tab_widget.addTab(self.buttons_wdg, "Create Joints")
+
+        self.tab_widget.addTab(self.buttons_wdg, "Create Tab")
+
         self.this = jCO.jointCreateAndOrientator()
 
     def create_layout(self):
@@ -86,46 +105,10 @@ class TabWidgetDialog(QtWidgets.QDialog):
         layout.addStretch()
 
     def create_connections(self):
-        self.buttons_wdg.button1.clicked.connect(self.this.createBaseJoint)
-        self.buttons_wdg.button2.clicked.connect(self.this.endBaseJoint)
-        # self.buttons_wdg.button3.clicked.connect(self.this.parentAndOrient)
+        self.buttons_wdg.run_btn.clicked.connect(self.run)
 
 
-"""
-class jointCreateAndOrientator(object):
-
-    def __init__(self):
-        self.baseJnt = []
-        self.endJnt = []
-
-    def createBaseJoint(self):
-
-        sel = mc.ls(sl=1)
-        clstr = mc.cluster()
-        mc.select(cl=1)
-        self.baseJnt = mc.joint(rad=10)
-        mc.select(cl=1)
-        const = mc.parentConstraint(clstr, self.baseJnt, mo=0)
-        mc.delete(const, clstr)
-        mc.select(sel)
-        mc.hilite(sel, tgl=1)
-
-    def endBaseJoint(self):
-
-        clstr = mc.cluster()
-        mc.select(cl=1)
-        self.endJnt = mc.joint(rad=10)
-        mc.select(cl=1)
-        const = mc.parentConstraint(clstr, self.endJnt, mo=0)
-        mc.delete(const, clstr)
-        self.parentAndOrient()
-
-    def parentAndOrient(self):
-
-        mc.parent(self.endJnt, self.baseJnt)
-
-        mc.joint(self.baseJnt, e=True, oj="xyz",
-                 secondaryAxisOrient="zdown", ch=True)
-
-        mc.joint(self.endJnt, e=True, oj="none", ch=True)
-"""
+    def run(self):
+        cbxValue = self.buttons_wdg.script_cbx.currentText()
+        #print (cbxValue)
+        scriptToReload = liveScriptsPath + cbxValue + ".py"

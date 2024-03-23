@@ -1,7 +1,7 @@
 import maya.cmds as mc
 import maya.mel as mel
 
-class AnimOps_Macros(object):
+class main(object):
         
     #constructor
     def __init__(self):
