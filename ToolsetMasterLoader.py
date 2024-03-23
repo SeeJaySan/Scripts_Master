@@ -1,7 +1,7 @@
 """
 File: ToolsetMasterLoader.py
 Author: CJ Nowacek
-Date: 2024-03-17
+Date Created: 2024-03-23
 Description: Loads ToolsetMaster
 """
 
@@ -15,11 +15,10 @@ path = r"C:\Users\cjnowacek\Desktop\important files\scripts\myScript"
 # Reload system modules keys
 for module_name in sys.modules.keys():
     top_module = module_name.split(".")[0]
-    print(top_module)
-# else:
-    # force reload if module is already loaded
+
     if top_module == "ToolsetMaster":
-        sys.modules.pop(module_name)
+        importlib.reload((sys.modules[(module_name)]))
+        break
 
 
 if path not in sys.path:
