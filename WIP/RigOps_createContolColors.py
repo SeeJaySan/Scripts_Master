@@ -5,13 +5,17 @@ import maya.mel as mel
 #Blue is 18
 #Red is 13
 
+def main():
+    RigOps_createContolColors()
 
-cmds.pickWalk(d='DOWN')
 
-sel = cmds.ls(sl=True, s=True)
+class RigOps_createContolColors(object):
+    cmds.pickWalk(d='DOWN')
 
-print(sel)
+    sel = cmds.ls(sl=True, s=True)
 
-for i in sel:
-    cmds.setAttr(i + '.overrideEnabled', 1)
-    cmds.setAttr(i + '.overrideColor', 18)
+    print(sel)
+
+    for i in sel:
+        cmds.setAttr(i + '.overrideEnabled', 1)
+        cmds.setAttr(i + '.overrideColor', 18)

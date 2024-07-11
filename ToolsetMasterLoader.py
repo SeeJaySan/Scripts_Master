@@ -9,7 +9,7 @@ import sys
 import importlib
 
 # path of the module
-path = r"C:\Users\cjnowacek\Desktop\important files\scripts\myScript"
+path = r"C:\Users\cjnowacek\Desktop\importantFiles\scripts\myScript"
 
 
 # Reload system modules keys
