@@ -68,6 +68,7 @@ class ModelTools(QtWidgets.QWidget):
         layout.addWidget(self.script_cbx)
         layout.addWidget(self.run_btn)
 
+
 class RigTools(QtWidgets.QWidget):
 
     # Initiallizing window Variables
@@ -132,9 +133,9 @@ class TabWidgetDialog(QtWidgets.QDialog):
 
         self.tab_widget = QtWidgets.QTabWidget()
 
+        self.tab_widget.addTab(self.script_wdg, "Load Scripts")
         self.tab_widget.addTab(self.model_wdg, "model")
         self.tab_widget.addTab(self.rig_wdg, "rig")
-        self.tab_widget.addTab(self.script_wdg, "Load Scripts")
 
     def create_layout(self):
         layout = QtWidgets.QVBoxLayout(self)
@@ -162,22 +163,22 @@ class TabWidgetDialog(QtWidgets.QDialog):
         if cbxValue in list(sys.modules.keys()):
             importlib.reload((sys.modules[(cbxValue)]))
             this = sys.modules[(cbxValue)]
-            this.main()
+            # that = this.main()
 
             # that = (dir(this)) # get the modules in the file
 
         else:
             importlib.import_module(cbxValue)
             this = sys.modules[(cbxValue)]
-            this.main()
-            
-        try:
-            this.close()
-            this.deleteLater()
-            this.show()
+            # that = this.main()
 
+        try:
+            that.close()
+            that.deleteLater()
         except:
             pass
 
-        #test_dialog = ToolsetMaster.TabWidgetDialog()
+        that = this.main()
+        that.show()
 
+        # test_dialog = ToolsetMaster.TabWidgetDialog()
