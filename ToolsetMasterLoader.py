@@ -9,7 +9,7 @@ import sys
 import importlib
 
 # path of the module
-path = r"C:\Users\cjnowacek\Desktop\importantFiles\scripts\myScript"
+path = r"C:\_\Gits\github\Scripts_Master"
 
 
 # Reload system modules keys
@@ -35,5 +35,5 @@ if __name__ == "__main__":
     except:
         pass
 
-    test_dialog = ToolsetMaster.TabWidgetDialog()
+    test_dialog = ToolsetMaster.TM_TabWindow()
     test_dialog.show()
