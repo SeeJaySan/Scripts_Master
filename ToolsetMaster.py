@@ -1,10 +1,3 @@
-"""
-File: ToolsetMaster.py
-Author: CJ Nowacek
-Created Date: 2024-03-17
-Description: ToolsetMaster functionality for loading scripts and generally useful tools.
-"""
-
 import sys
 import os
 import importlib
@@ -12,22 +5,23 @@ from PySide2 import QtWidgets, QtCore
 from shiboken2 import wrapInstance
 
 from maya import cmds as mc
+from maya import OpenMaya as om
 from maya import OpenMayaUI as omui
 from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
 
-from third_party import zbw_controlShapes as zbw_con
-
+from msc.third_party import zbw_controlShapes as zbw_con
 
 ROOTDIR = os.path.dirname(__file__)
 
 SCRIPTS_PATHS = {
-    "modules": os.path.join(ROOTDIR, "modules"),
     "model": os.path.join(ROOTDIR, "model"),
     "rig": os.path.join(ROOTDIR, "rig"),
     "anim": os.path.join(ROOTDIR, "anim"),
     "tool": os.path.join(ROOTDIR, "tool"),
-    "wip": os.path.join(ROOTDIR, "WIP")
+    "msc": os.path.join(ROOTDIR, "msc"),
+    "wip": os.path.join(ROOTDIR, "WIP"),
 }
+
 
 def list_modules(script_path):
     """List all Python files in a given directory."""
@@ -36,6 +30,7 @@ def list_modules(script_path):
         if each.endswith(".py"):
             module_names.append(each.split(".")[0])
     return module_names
+
 
 def maya_main_window():
     """Return the Maya main window widget as a Python object."""
@@ -62,7 +57,7 @@ class TM_Tab(QtWidgets.QWidget):
         layout.setAlignment(QtCore.Qt.AlignTop)
 
 
-class TM_TabWindow(QtWidgets.QDialog):
+class TM_TabWindow(MayaQWidgetDockableMixin, QtWidgets.QDialog):
     """Main dialog window for ToolsetMaster."""
 
     WINDOW_TITLE = "Toolset Master"
@@ -84,11 +79,15 @@ class TM_TabWindow(QtWidgets.QDialog):
 
         self.setWindowFlag(QtCore.Qt.WindowContextHelpButtonHint, False)
 
-        self.module_names = {key: list_modules(path) for key, path in SCRIPTS_PATHS.items()}
+        self.module_names = {
+            key: list_modules(path) for key, path in SCRIPTS_PATHS.items()
+        }
 
         self.create_widgets()
         self.create_layout()
         self.create_connections()
+
+        self.setWindowTitle(self.WINDOW_TITLE)  # Ensure window title is set
 
     def create_widgets(self):
         """Create widgets for all tabs."""
@@ -97,8 +96,8 @@ class TM_TabWindow(QtWidgets.QDialog):
             "Rig": TM_Tab(),
             "Anim": TM_Tab(),
             "Tool": TM_Tab(),
+            "MSC": TM_Tab(),
             "WIP": TM_Tab(),
-            "Other": TM_Tab()
         }
 
         for key, tab in self.tabs.items():
@@ -116,12 +115,18 @@ class TM_TabWindow(QtWidgets.QDialog):
 
     def create_connections(self):
         """Connect buttons to their respective functions."""
-        self.tabs["Model"].run_btn.clicked.connect(lambda: self.run_script("model"))
-        self.tabs["Rig"].run_btn.clicked.connect(lambda: self.run_script("rig"))
-        self.tabs["Anim"].run_btn.clicked.connect(lambda: self.run_script("anim"))
-        self.tabs["Tool"].run_btn.clicked.connect(lambda: self.run_script("tool"))
-        self.tabs["WIP"].run_btn.clicked.connect(lambda: self.run_script("wip"))
-        self.tabs["Other"].run_btn.clicked.connect(lambda: self.run_script("other"))
+        self.tabs["Model"].run_btn.clicked.connect(
+            lambda: self.run_script("model"))
+        self.tabs["Rig"].run_btn.clicked.connect(
+            lambda: self.run_script("rig"))
+        self.tabs["Anim"].run_btn.clicked.connect(
+            lambda: self.run_script("anim"))
+        self.tabs["Tool"].run_btn.clicked.connect(
+            lambda: self.run_script("tool"))
+        self.tabs["MSC"].run_btn.clicked.connect(
+            lambda: self.run_script("msc"))
+        self.tabs["WIP"].run_btn.clicked.connect(
+            lambda: self.run_script("wip"))
 
     def run_script(self, category):
         """Handle the logic for running the selected script."""
@@ -141,15 +146,25 @@ class TM_TabWindow(QtWidgets.QDialog):
         try:
             module.main().show()
         except AttributeError:
-            om.MGlobal.displayWarning(f"No main function found in {selected_script}")
+            om.MGlobal.displayWarning(
+                "No main function found in {0}".format(selected_script)
+            )
+
+
+def show_dockable_widget():
+    """Show the dockable widget in Maya."""
+    try:
+        for widget in QtWidgets.QApplication.topLevelWidgets():
+            if isinstance(widget, TM_TabWindow):
+                widget.close()
+                widget.deleteLater()
+    except Exception as e:
+        print("Error closing existing widget: {0}".format(e))
+
+    dockable_widget = TM_TabWindow()
+    # Ensure it's shown in Maya's dockable area
+    dockable_widget.show(dockable_widget)
 
 
 if __name__ == "__main__":
-    try:
-        dialog.close()  # pylint: disable=E0601
-        dialog.deleteLater()
-    except:
-        pass
-
-    dialog = TM_TabWindow()
-    dialog.show()
+    show_dockable_widget()

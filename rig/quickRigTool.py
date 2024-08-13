@@ -21,10 +21,10 @@ from maya import OpenMayaUI as omui
 from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
 
 # IMPORT Third-Party Libraries
-from third_party import zbw_controlShapes as zbw_con
+from msc.third_party import zbw_controlShapes as zbw_con
 
 # IMPORT Local Modules
-from modules import jointCreateAndOrientatorModule as jCO
+from msc import jointCreateAndOrientatorModule as jCO
 
 
 # Function to return the Maya main window as a Python object

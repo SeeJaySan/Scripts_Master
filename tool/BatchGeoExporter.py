@@ -1,117 +1,147 @@
-__author__ = "CJ Nowacek"
-__credits__ = "CJ Nowacek"
-__license__ = "GPL"
-__version__ = "1.0.2"
-__maintainer__ = "CJ Nowacek"
-__email__ = "cj.nowacek@gmail.com"
-__status__ = "Production"
+"""
+ToolOps Batch Geometry Exporter
+
+This script provides a Maya user interface for exporting selected geometries 
+in various file formats, including OBJ, FBX, and STL. The tool allows users 
+to select the desired export type and specify the export path.
+
+Features:
+- Export selected geometries as OBJ, FBX, or STL files.
+- Provide feedback for STL file naming issues.
+- Ensure correct handling of file paths and parent-child relationships.
+
+Usage:
+    - Run the `main` function to display the exporter UI.
+    - Select the export type (OBJ, FBX, or STL).
+    - Specify the export path.
+    - Click "Export" to export the selected geometries.
+
+Author: CJ Nowacek
+Credits: CJ Nowacek
+License: GPL
+Version: 1.0.2
+Maintainer: CJ Nowacek
+Email: cj.nowacek@gmail.com
+Status: Production
+"""
 
 import maya.cmds as mc
 import os
 
-# DONE add different export types - added fb, obj, and stl - 11/13/2022
-# TODO add options for animation?
 
 def main():
-    ToolOps_BatchGeoExporter()
+    """Launch the ToolOps Batch Geometry Exporter UI."""
+    ToolOpsBatchGeoExporter()
 
 
-class ToolOps_BatchGeoExporter(object):
-
-    # constructor
+class ToolOpsBatchGeoExporter(object):
+    """A class to handle batch exporting of geometries in Maya."""
+    
     def __init__(self):
-
+        """Initialize the UI for the batch geometry exporter."""
         self.window = "ToolOps_BatchGeoExporter"
         self.title = "Mesh Exporter"
-        self.size = (400, 120)
+        self.size = (400, 150)
+        
+        self.create_ui()
 
-        # close old window is open
+    def create_ui(self):
+        """Create and display the UI window."""
+        # Close old window if open
         if mc.window(self.window, exists=True):
             mc.deleteUI(self.window, window=True)
 
-        # create new window
-        self.window = mc.window(self.window, title=self.title)
+        # Create new window
+        self.window = mc.window(self.window, title=self.title, widthHeight=self.size)
 
         mc.columnLayout(adjustableColumn=True)
+        mc.text(self.title, font="boldLabelFont")
+        mc.separator(height=10)
 
-        mc.text(self.title)
-        mc.separator(height=20)
+        # Export type menu
+        mc.text("Select Export Type:")
+        self.options_menu = mc.optionMenu("exportTypeMenu", label="Export Type")
+        mc.menuItem(label="OBJ")
+        mc.menuItem(label="FBX")
+        mc.menuItem(label="STL")
 
-        self.options_menu = mc.optionMenu("this", label="Export Type")
-        mc.menuItem(label="obj", parent=self.options_menu)
-        mc.menuItem(label="fbx", parent=self.options_menu)
-        mc.menuItem(label="stl", parent=self.options_menu)
+        mc.separator(height=10)
 
-        self.name = mc.textFieldGrp(label="path:")
-        self.export_bn = mc.button(label="Export", command=self.exportStuff)
-        mc.setParent("..")
+        # Path input field
+        mc.text("Specify Export Path:")
+        self.path_field = mc.textFieldGrp(label="Path:", text="C:/export/")
 
-        # display new window
+        mc.separator(height=10)
+
+        # Export button
+        self.export_btn = mc.button(label="Export", command=self.export_stuff, width=200)
+
         mc.showWindow()
 
-    def exportStuff(self, *args):
-        sel = mc.ls(sl=1)
+    def export_stuff(self, *args):
+        """Export selected geometries based on the chosen type and path."""
+        selections = mc.ls(sl=True)
 
-        typeOption = ""
+        # Get input path
+        path = mc.textFieldGrp(self.path_field, q=True, text=True)
+        if not path:
+            mc.error("Please input a valid path.")
+        corrected_path = path.replace('"', '')
 
-        # getting input path
-        path = mc.textFieldGrp(self.name, q=True, text=True)
-        if path == "":
-            mc.error("Please input a path")
-        correctedPath = str(path.replace('"', ""))
+        # Verify the directory exists
+        if not os.path.exists(corrected_path):
+            mc.error(f"Directory does not exist: {corrected_path}")
+            return
 
-        # getting file type and options
-        exportType = str(mc.optionMenu(self.options_menu, q=True, value=True))
+        # Get export type and options
+        export_type = mc.optionMenu(self.options_menu, q=True, value=True).lower()
+        type_option, options = self._get_export_options(export_type)
 
-        objOptions = "groups=1;ptgroups=1;materials=1;smoothing=1;normals=1"
-        fbxOptions = "v=0;"
-        stlOptions = "groups=1;ptgroups=1;materials=1;smoothing=1;normals=1"
+        if not type_option:
+            return
 
-        if "obj" in exportType:
-            typeOption = "OBJexport"
-            options = objOptions
-        elif "stl" in exportType:
-            typeOption = "STLexport"
-            options = stlOptions
-            exportType = exportType
-        elif "fbx" in exportType:
-            typeOption = "FBX EXPORT"
-            options = fbxOptions
-        else:
-            mc.error("Please select geometry")
+        # Export each selected object
+        for obj in selections:
+            mc.select(obj)
 
-        # run through list of objects
-        for i in sel:
+            # Handle parent nodes
+            parent_node = mc.listRelatives(obj, parent=True)
+            if parent_node:
+                mc.parent(obj, world=True)
 
-            # get objects from list
-            mc.select(i)
+            # Perform export
+            file_path = os.path.join(corrected_path, f"{obj}.{export_type}")
+            try:
+                mc.file(file_path, force=True, options=options, type=type_option, preserveReferences=True, exportSelected=True)
+            except Exception as e:
+                mc.error(f"Error exporting file: {file_path}\n{str(e)}")
+                return
 
-            # checking if there is a parent
-            parentNode = mc.listRelatives(p=True)
-            hasParent = bool(mc.listRelatives(i, parent=True))
-            if hasParent:
-                mc.parent(i, world=True)
-
-            # exporting
-            mc.file(
-                "{}{}{}{}".format(correctedPath, "\\", i, "." + exportType),
-                f=True,
-                options=options,
-                typ=typeOption,
-                pr=True,
-                es=True,
-            )
-            if exportType == "stl":
-
+            # Warn for STL file naming
+            if export_type == "stl":
                 mc.confirmDialog(
-                    t="STL Warning",
-                    m="stl export doesn't name files correctly. Add the .stl suffix to stl file exports",
-                    db="ok",
+                    title="STL Warning",
+                    message="STL export might not name files correctly. Add the .stl suffix manually.",
+                    button=["OK"],
                 )
 
-            # reparenting
-            if hasParent:
-                mc.parent(i, parentNode)
+            # Reparent objects
+            if parent_node:
+                mc.parent(obj, parent_node)
 
+    def _get_export_options(self, export_type):
+        """Return the appropriate file type and options based on the export type."""
+        options_dict = {
+            "obj": ("OBJexport", "groups=1;ptgroups=1;materials=1;smoothing=1;normals=1"),
+            "fbx": ("FBX export", "v=0;"),
+            "stl": ("STLexport", "groups=1;ptgroups=1;materials=1;smoothing=1;normals=1")
+        }
 
-# myWindow = ToolOps_BatchGeoExporter()
+        if export_type in options_dict:
+            return options_dict[export_type]
+        else:
+            mc.error("Please select a valid geometry export type.")
+            return None, None
+
+# To run the tool, uncomment the line below:
+main()

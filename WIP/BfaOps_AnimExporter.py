@@ -1,158 +1,124 @@
-import sys
 import os
-import subprocess
-import importlib
 import maya.cmds as mc
 import maya.mel as mel
 
-
-def main():
-    BfaOps_AnimExporter()
-
-class BfaOps_AnimExporter(object):
-
-    # constructor
+class BfaOpsAnimExporter(object):
     def __init__(self):
-
-        self.window = "BfaOps_AnimExport"
+        self.window_name = "BfaOps_AnimExport"
         self.title = "Anim Exporter"
         self.size = (400, 120)
 
-        # close old window is open
-        if mc.window(self.window, exists=True):
-            mc.deleteUI(self.window, window=True)
+        self.create_ui()
 
-        # create new window
-        self.window = mc.window(self.window, title=self.title)
+    def create_ui(self):
+        # Close old window if it exists
+        if mc.window(self.window_name, exists=True):
+            mc.deleteUI(self.window_name, window=True)
+
+        # Create new window
+        self.window = mc.window(self.window_name, title=self.title)
 
         mc.columnLayout(adjustableColumn=True)
-
         mc.text(self.title)
         mc.separator(height=20)
 
-        self.prep_bn = mc.button(label="Prep", command=self.BfaOps_AnimExportPrep)
+        self.prep_btn = mc.button(label="Prep", command=self.prepare_scene)
         mc.separator(height=20)
-        mc.text("set time range")
+        mc.text("Set Time Range")
         mc.separator(height=10)
-        self.minTime_bn = mc.button(label="Set Min Time", command=self.setMinTime)
-        self.maxTime_bn = mc.button(label="Set Max Time", command=self.setMaxTime)
+        self.min_time_btn = mc.button(label="Set Min Time", command=self.set_min_time)
+        self.max_time_btn = mc.button(label="Set Max Time", command=self.set_max_time)
         mc.separator(height=20)
         mc.text("Exporting")
         mc.separator(height=10)
-        self.exportSelected_bn = mc.button(
-            label="First Time Export", command=self.exportSelection, enable=False
-        )
-        self.export_bn = mc.button(
-            label="Export", command=self.exportAnimations, enable=False
-        )
+        self.export_selected_btn = mc.button(label="First Time Export", command=self.export_selection, enable=False)
+        self.export_btn = mc.button(label="Export", command=self.export_animations, enable=False)
         mc.separator(height=20)
-        mc.text("restarting file")
+        mc.text("Restarting File")
         mc.separator(height=10)
-        self.reopen_bn = mc.button(label="Reopen", command=self.restartFile)
+        self.reopen_btn = mc.button(label="Reopen", command=self.restart_file)
 
         mc.separator(height=20)
-
-        # display new window
         mc.showWindow()
 
-    def BfaOps_AnimExportPrep(self, *args):
-
-        # prepping
-
+    def prepare_scene(self, *args):
+        # Prepare scene for export
         mel.eval("file -save;")
-
         mel.eval('namespace -mergeNamespaceWithRoot -removeNamespace "SKL_robin";')
 
-        all_ref_paths = (
-            mc.file(q=True, reference=True) or []
-        )  # Get a list of all top-level references in the scene.
+        all_ref_paths = mc.file(q=True, reference=True) or []
 
         for ref_path in all_ref_paths:
-            if mc.referenceQuery(
-                ref_path, isLoaded=True
-            ):  # Only import it if it's loaded, otherwise it would throw an error.
-                mc.file(ref_path, importReference=True)  # Import the reference.
-
-                new_ref_paths = mc.file(
-                    q=True, reference=True
-                )  # If the reference had any nested references they will now become top-level references, so recollect them.
+            if mc.referenceQuery(ref_path, isLoaded=True):
+                mc.file(ref_path, importReference=True)
+                new_ref_paths = mc.file(q=True, reference=True)
                 if new_ref_paths:
-                    for new_ref_path in new_ref_paths:
-                        if (
-                            new_ref_path not in all_ref_paths
-                        ):  # Only add on ones that we don't already have.
-                            all_ref_paths.append(new_ref_path)
+                    all_ref_paths.extend([path for path in new_ref_paths if path not in all_ref_paths])
+
         mc.select("SKL")
-        this = mc.pickWalk(direction="DOWN")
-        mc.parent(this, w=1)
+        self.move_selection_to_world("DOWN")
 
-        that = mc.select("GEO")
-        this1 = mc.listRelatives(c=True)
-        mc.parent(this1, w=1)
+        mc.select("GEO")
+        self.move_children_to_world()
 
-        mc.select("Root", hi=1)
+        mc.select("Root", hi=True)
 
-        mc.button(self.exportSelected_bn, e=True, enable=True)
-        mc.button(self.export_bn, e=True, enable=True)
+        mc.button(self.export_selected_btn, e=True, enable=True)
+        mc.button(self.export_btn, e=True, enable=True)
 
-        mc.button(self.prep_bn, e=True, enable=False)
-        mc.button(self.minTime_bn, e=True, enable=False)
-        mc.button(self.maxTime_bn, e=True, enable=False)
+        mc.button(self.prep_btn, e=True, enable=False)
+        mc.button(self.min_time_btn, e=True, enable=False)
+        mc.button(self.max_time_btn, e=True, enable=False)
 
-    def exportAnimations(self, *args):
+    def move_selection_to_world(self, direction):
+        selected = mc.pickWalk(direction=direction)
+        mc.parent(selected, world=True)
 
-        # exporting
+    def move_children_to_world(self):
+        children = mc.listRelatives(c=True)
+        if children:
+            mc.parent(children, world=True)
 
-        mc.select("Root", hi=1)
+    def export_animations(self, *args):
+        mc.select("Root", hi=True)
 
         filepath = mc.file(q=True, sn=True)
         filename = os.path.basename(filepath)
         path = filepath.replace(filename, "")
-
         new_filename = filename.replace("ma", "fbx")
+        new_path = os.path.join(path, "exportTesting", new_filename)
 
-        new_path = '"' + path + "exportTesting/" + new_filename + '"'
-        print(new_path)
-
-        # exporting
-        # mel.eval('file -force -options "v=0;" -typ "FBX export" -pr -es {0};'.format(new_path))
-
-        min = mc.playbackOptions(q=True, min=True)
-        max = mc.playbackOptions(q=True, max=True)
+        min_time = mc.playbackOptions(q=True, min=True)
+        max_time = mc.playbackOptions(q=True, max=True)
 
         mel.eval("FBXResetExport")
-        # mel.eval('FBXProperties')
         mel.eval("FBXExportBakeComplexAnimation -v 1")
-        mel.eval("FBXExportBakeComplexStart -v 1".format(min))
-        mel.eval("FBXExportBakeComplexEnd -v {0}".format(max))
-        mel.eval("FBXExportBakeComplexEnd -v {0}".format(max))
+        mel.eval(f"FBXExportBakeComplexStart -v {min_time}")
+        mel.eval(f"FBXExportBakeComplexEnd -v {max_time}")
         mel.eval("FBXExportAnimationOnly -v 1")
-        mel.eval("FBXExportAnimationOnly -v 1")
+        mel.eval(f"FBXExport -f \"{new_path}\" -s")
 
-        mc.select("Root", hi=1)
-        mel.eval("FBXExport -f {0} -s".format(new_path))
-
-    def restartFile(self, *args):
+    def restart_file(self, *args):
         filepath = mc.file(q=True, sn=True)
         mc.file(filepath, open=True, force=True)
-        mc.button(self.exportSelected_bn, e=True, enable=False)
-        mc.button(self.export_bn, e=True, enable=False)
-        mc.button(self.prep_bn, e=True, enable=True)
-        mc.button(self.minTime_bn, e=True, enable=True)
-        mc.button(self.maxTime_bn, e=True, enable=True)
 
-    def setMinTime(self, *args):
+        mc.button(self.export_selected_btn, e=True, enable=False)
+        mc.button(self.export_btn, e=True, enable=False)
+        mc.button(self.prep_btn, e=True, enable=True)
+        mc.button(self.min_time_btn, e=True, enable=True)
+        mc.button(self.max_time_btn, e=True, enable=True)
 
-        this = mc.currentTime(q=True)
+    def set_min_time(self, *args):
+        current_time = mc.currentTime(q=True)
+        mc.playbackOptions(min=current_time, ast=current_time)
 
-        mc.playbackOptions(min=this, ast=this)
+    def set_max_time(self, *args):
+        current_time = mc.currentTime(q=True)
+        mc.playbackOptions(max=current_time, aet=current_time)
 
-    def setMaxTime(self, *args):
-
-        this = mc.currentTime(q=True)
-
-        mc.playbackOptions(max=this, aet=this)
-
-    def exportSelection(self, *args):
-
+    def export_selection(self, *args):
         mel.eval("ExportSelection;")
+
+def main():
+    exporter = BfaOpsAnimExporter()
+    exporter.run()
