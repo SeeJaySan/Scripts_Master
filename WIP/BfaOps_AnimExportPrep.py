@@ -1,39 +1,53 @@
 import maya.cmds as cmds
 import maya.mel as mel
-import os
 
-def main():
-    BfaOps_AnimExportPrep()
+def main(loader_input):
+    BfaOps_AnimExportPrep(loader_input)
 
-def BfaOps_AnimExportPrep():
+def BfaOps_AnimExportPrep(loader_input):
+    """Prepares the animation for export by merging namespaces and importing references.
 
-    mel.eval('namespace -mergeNamespaceWithRoot -removeNamespace "SKL_robin";')
+    Args:
+        loader_input (str): A string passed from the loader script to specify the namespace or other identifiers.
+    """
 
-    all_ref_paths = (
-        cmds.file(q=True, reference=True) or []
-    )  # Get a list of all top-level references in the scene.
+    # Merge namespace with root and remove the specified namespace
+    namespace = loader_input
+    mel_command = f'namespace -mergeNamespaceWithRoot -removeNamespace "{namespace}";'
+    mel.eval(mel_command)
+
+    # Get all top-level references in the scene
+    all_ref_paths = cmds.file(q=True, reference=True) or []
 
     for ref_path in all_ref_paths:
-        if cmds.referenceQuery(
-            ref_path, isLoaded=True
-        ):  # Only import it if it's loaded, otherwise it would throw an error.
-            cmds.file(ref_path, importReference=True)  # Import the reference.
+        # Import the reference if it's loaded
+        if cmds.referenceQuery(ref_path, isLoaded=True):
+            cmds.file(ref_path, importReference=True)
 
-            new_ref_paths = cmds.file(
-                q=True, reference=True
-            )  # If the reference had any nested references they will now become top-level references, so recollect them.
+            # Collect any new top-level references from nested references
+            new_ref_paths = cmds.file(q=True, reference=True)
             if new_ref_paths:
                 for new_ref_path in new_ref_paths:
-                    if (
-                        new_ref_path not in all_ref_paths
-                    ):  # Only add on ones that we don't already have.
+                    if new_ref_path not in all_ref_paths:
                         all_ref_paths.append(new_ref_path)
-    cmds.select("SKL")
-    this = cmds.pickWalk(direction="DOWN")
-    cmds.parent(this, w=1)
 
-    that = cmds.select("GEO")
-    this1 = cmds.listRelatives(c=True)
-    cmds.parent(this1, w=1)
+    # Parenting operations for 'SKL' and 'GEO' objects
+    if cmds.objExists("SKL"):
+        cmds.select("SKL")
+        skl_children = cmds.pickWalk(direction="down")
+        cmds.parent(skl_children, world=True)
 
-    cmds.select("Root", hi=1)
+    if cmds.objExists("GEO"):
+        cmds.select("GEO")
+        geo_children = cmds.listRelatives(children=True)
+        cmds.parent(geo_children, world=True)
+
+    # Select the 'Root' object and its hierarchy
+    if cmds.objExists("Root"):
+        cmds.select("Root", hierarchy=True)
+
+# Example usage from another script
+if __name__ == "__main__":
+    # This is where you'd call the main function with a string from the loader script
+    loader_input = "SKL_robin"  # Example string input
+    main(loader_input)

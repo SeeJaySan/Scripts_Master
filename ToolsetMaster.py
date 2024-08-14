@@ -18,7 +18,6 @@ SCRIPTS_PATHS = {
     "rig": os.path.join(ROOTDIR, "rig"),
     "anim": os.path.join(ROOTDIR, "anim"),
     "tool": os.path.join(ROOTDIR, "tool"),
-    "msc": os.path.join(ROOTDIR, "msc"),
     "wip": os.path.join(ROOTDIR, "WIP"),
 }
 
@@ -47,7 +46,7 @@ class TM_Tab(QtWidgets.QWidget):
         # Create widgets
         self.script_cbx = QtWidgets.QComboBox()
         self.run_btn = QtWidgets.QPushButton("Run")
-        self.test_le = QtWidgets.QLineEdit("Enter Text", self)
+        self.test_le = QtWidgets.QLineEdit("", self)
 
         # Layout
         layout = QtWidgets.QVBoxLayout(self)
@@ -96,8 +95,7 @@ class TM_TabWindow(MayaQWidgetDockableMixin, QtWidgets.QDialog):
             "Rig": TM_Tab(),
             "Anim": TM_Tab(),
             "Tool": TM_Tab(),
-            "MSC": TM_Tab(),
-            "WIP": TM_Tab(),
+            "Wip": TM_Tab()
         }
 
         for key, tab in self.tabs.items():
@@ -123,9 +121,7 @@ class TM_TabWindow(MayaQWidgetDockableMixin, QtWidgets.QDialog):
             lambda: self.run_script("anim"))
         self.tabs["Tool"].run_btn.clicked.connect(
             lambda: self.run_script("tool"))
-        self.tabs["MSC"].run_btn.clicked.connect(
-            lambda: self.run_script("msc"))
-        self.tabs["WIP"].run_btn.clicked.connect(
+        self.tabs["Wip"].run_btn.clicked.connect(
             lambda: self.run_script("wip"))
 
     def run_script(self, category):
@@ -133,6 +129,9 @@ class TM_TabWindow(MayaQWidgetDockableMixin, QtWidgets.QDialog):
         script_path = SCRIPTS_PATHS.get(category, "")
         tab = self.tabs[category.capitalize()]
         selected_script = tab.script_cbx.currentText()
+
+        # Get the string input from the line edit
+        user_input = tab.test_le.text()
 
         if script_path not in sys.path:
             sys.path.append(script_path)
@@ -144,7 +143,8 @@ class TM_TabWindow(MayaQWidgetDockableMixin, QtWidgets.QDialog):
 
         module = sys.modules[selected_script]
         try:
-            module.main().show()
+            # Pass the user_input to the script's main() function
+            module.main(user_input).show()
         except AttributeError:
             om.MGlobal.displayWarning(
                 "No main function found in {0}".format(selected_script)

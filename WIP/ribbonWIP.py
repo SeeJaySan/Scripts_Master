@@ -1,7 +1,7 @@
 from maya import cmds as mc
 from maya import mel
 
-from third_party import zbw_controlShapes as zbw_con
+from msc.third_party import zbw_controlShapes as zbw_con
 
 jointLocations = []
 

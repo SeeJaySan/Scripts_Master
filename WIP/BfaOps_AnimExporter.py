@@ -1,48 +1,77 @@
 import os
 import maya.cmds as mc
 import maya.mel as mel
+from PySide2 import QtWidgets, QtCore
+from shiboken2 import wrapInstance
+import maya.OpenMaya as om
+import maya.OpenMayaUI as omui
 
-class BfaOpsAnimExporter(object):
-    def __init__(self):
-        self.window_name = "BfaOps_AnimExport"
-        self.title = "Anim Exporter"
-        self.size = (400, 120)
+def maya_main_window():
+    """Return the Maya main window widget as a Python object."""
+    main_window_ptr = omui.MQtUtil.mainWindow()
+    return wrapInstance(int(main_window_ptr), QtWidgets.QWidget)
+
+class BfaOpsAnimExporter(QtWidgets.QMainWindow):
+    def __init__(self, parent=maya_main_window()):
+        super(BfaOpsAnimExporter, self).__init__(parent)
+
+        self.setWindowTitle("Anim Exporter")
+        self.setFixedSize(400, 200)
 
         self.create_ui()
 
     def create_ui(self):
-        # Close old window if it exists
-        if mc.window(self.window_name, exists=True):
-            mc.deleteUI(self.window_name, window=True)
+        """Create the UI elements."""
+        central_widget = QtWidgets.QWidget(self)
+        self.setCentralWidget(central_widget)
 
-        # Create new window
-        self.window = mc.window(self.window_name, title=self.title)
+        layout = QtWidgets.QVBoxLayout(central_widget)
 
-        mc.columnLayout(adjustableColumn=True)
-        mc.text(self.title)
-        mc.separator(height=20)
+        # Prep Button
+        self.prep_btn = QtWidgets.QPushButton("Prep", self)
+        self.prep_btn.clicked.connect(self.prepare_scene)
+        layout.addWidget(self.prep_btn)
 
-        self.prep_btn = mc.button(label="Prep", command=self.prepare_scene)
-        mc.separator(height=20)
-        mc.text("Set Time Range")
-        mc.separator(height=10)
-        self.min_time_btn = mc.button(label="Set Min Time", command=self.set_min_time)
-        self.max_time_btn = mc.button(label="Set Max Time", command=self.set_max_time)
-        mc.separator(height=20)
-        mc.text("Exporting")
-        mc.separator(height=10)
-        self.export_selected_btn = mc.button(label="First Time Export", command=self.export_selection, enable=False)
-        self.export_btn = mc.button(label="Export", command=self.export_animations, enable=False)
-        mc.separator(height=20)
-        mc.text("Restarting File")
-        mc.separator(height=10)
-        self.reopen_btn = mc.button(label="Reopen", command=self.restart_file)
+        # Time Range Section
+        layout.addWidget(self.create_label("Set Time Range"))
+        time_range_layout = QtWidgets.QHBoxLayout()
+        self.min_time_btn = QtWidgets.QPushButton("Set Min Time", self)
+        self.min_time_btn.clicked.connect(self.set_min_time)
+        time_range_layout.addWidget(self.min_time_btn)
 
-        mc.separator(height=20)
-        mc.showWindow()
+        self.max_time_btn = QtWidgets.QPushButton("Set Max Time", self)
+        self.max_time_btn.clicked.connect(self.set_max_time)
+        time_range_layout.addWidget(self.max_time_btn)
+        layout.addLayout(time_range_layout)
 
-    def prepare_scene(self, *args):
-        # Prepare scene for export
+        # Export Section
+        layout.addWidget(self.create_label("Exporting"))
+        export_layout = QtWidgets.QVBoxLayout()
+        self.export_selected_btn = QtWidgets.QPushButton("First Time Export", self)
+        self.export_selected_btn.setEnabled(False)
+        self.export_selected_btn.clicked.connect(self.export_selection)
+        export_layout.addWidget(self.export_selected_btn)
+
+        self.export_btn = QtWidgets.QPushButton("Export", self)
+        self.export_btn.setEnabled(False)
+        self.export_btn.clicked.connect(self.export_animations)
+        export_layout.addWidget(self.export_btn)
+        layout.addLayout(export_layout)
+
+        # Restart Button
+        layout.addWidget(self.create_label("Restarting File"))
+        self.reopen_btn = QtWidgets.QPushButton("Reopen", self)
+        self.reopen_btn.clicked.connect(self.restart_file)
+        layout.addWidget(self.reopen_btn)
+
+    def create_label(self, text):
+        """Helper function to create a QLabel with center alignment."""
+        label = QtWidgets.QLabel(text, self)
+        label.setAlignment(QtCore.Qt.AlignCenter)
+        return label
+
+    def prepare_scene(self):
+        """Prepare the scene for export."""
         mel.eval("file -save;")
         mel.eval('namespace -mergeNamespaceWithRoot -removeNamespace "SKL_robin";')
 
@@ -63,12 +92,12 @@ class BfaOpsAnimExporter(object):
 
         mc.select("Root", hi=True)
 
-        mc.button(self.export_selected_btn, e=True, enable=True)
-        mc.button(self.export_btn, e=True, enable=True)
+        self.export_selected_btn.setEnabled(True)
+        self.export_btn.setEnabled(True)
 
-        mc.button(self.prep_btn, e=True, enable=False)
-        mc.button(self.min_time_btn, e=True, enable=False)
-        mc.button(self.max_time_btn, e=True, enable=False)
+        self.prep_btn.setEnabled(False)
+        self.min_time_btn.setEnabled(False)
+        self.max_time_btn.setEnabled(False)
 
     def move_selection_to_world(self, direction):
         selected = mc.pickWalk(direction=direction)
@@ -79,7 +108,7 @@ class BfaOpsAnimExporter(object):
         if children:
             mc.parent(children, world=True)
 
-    def export_animations(self, *args):
+    def export_animations(self):
         mc.select("Root", hi=True)
 
         filepath = mc.file(q=True, sn=True)
@@ -98,27 +127,37 @@ class BfaOpsAnimExporter(object):
         mel.eval("FBXExportAnimationOnly -v 1")
         mel.eval(f"FBXExport -f \"{new_path}\" -s")
 
-    def restart_file(self, *args):
+    def restart_file(self):
         filepath = mc.file(q=True, sn=True)
         mc.file(filepath, open=True, force=True)
 
-        mc.button(self.export_selected_btn, e=True, enable=False)
-        mc.button(self.export_btn, e=True, enable=False)
-        mc.button(self.prep_btn, e=True, enable=True)
-        mc.button(self.min_time_btn, e=True, enable=True)
-        mc.button(self.max_time_btn, e=True, enable=True)
+        self.export_selected_btn.setEnabled(False)
+        self.export_btn.setEnabled(False)
+        self.prep_btn.setEnabled(True)
+        self.min_time_btn.setEnabled(True)
+        self.max_time_btn.setEnabled(True)
 
-    def set_min_time(self, *args):
+    def set_min_time(self):
         current_time = mc.currentTime(q=True)
         mc.playbackOptions(min=current_time, ast=current_time)
 
-    def set_max_time(self, *args):
+    def set_max_time(self):
         current_time = mc.currentTime(q=True)
         mc.playbackOptions(max=current_time, aet=current_time)
 
-    def export_selection(self, *args):
+    def export_selection(self):
         mel.eval("ExportSelection;")
 
-def main():
-    exporter = BfaOpsAnimExporter()
-    exporter.run()
+def show_exporter():
+    """Show the exporter UI in Maya."""
+    global anim_exporter
+    try:
+        anim_exporter.close()  # Close any existing instance of the exporter
+    except:
+        pass
+
+    anim_exporter = BfaOpsAnimExporter()
+    anim_exporter.show()
+
+if __name__ == "__main__":
+    show_exporter()
