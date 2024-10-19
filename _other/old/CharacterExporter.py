@@ -3,7 +3,7 @@ import maya.mel as mel
 import subprocess
 import os
 
-def main():
+def main(*args):
     ToolOps_CharaterExporter()
 
 path = r"C:\Dropbox\BFA\Artwork\Character\Robin\RIG"

@@ -21,7 +21,6 @@ SCRIPTS_PATHS = {
     "wip": os.path.join(ROOTDIR, "WIP"),
 }
 
-
 def list_modules(script_path):
     """List all Python files in a given directory."""
     module_names = []
@@ -30,12 +29,10 @@ def list_modules(script_path):
             module_names.append(each.split(".")[0])
     return module_names
 
-
 def maya_main_window():
     """Return the Maya main window widget as a Python object."""
     main_window_ptr = omui.MQtUtil.mainWindow()
     return wrapInstance(int(main_window_ptr), QtWidgets.QWidget)
-
 
 class TM_Tab(QtWidgets.QWidget):
     """Class to define the UI structure for each tab."""
@@ -54,7 +51,6 @@ class TM_Tab(QtWidgets.QWidget):
         layout.addWidget(self.run_btn)
         layout.addWidget(self.test_le)
         layout.setAlignment(QtCore.Qt.AlignTop)
-
 
 class TM_TabWindow(MayaQWidgetDockableMixin, QtWidgets.QDialog):
     """Main dialog window for ToolsetMaster."""
@@ -164,7 +160,7 @@ def show_dockable_widget():
     dockable_widget = TM_TabWindow()
     # Ensure it's shown in Maya's dockable area
     dockable_widget.show(dockable_widget)
-
+    
 
 if __name__ == "__main__":
     show_dockable_widget()

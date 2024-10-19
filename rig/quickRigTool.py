@@ -143,6 +143,6 @@ class TabWidgetDialog(QtWidgets.QDialog):
 
 
 # Main function to run the tool
-def main():
+def main(*args):
     dialog = TabWidgetDialog()
     dialog.show()
