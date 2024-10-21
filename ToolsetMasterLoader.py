@@ -3,7 +3,7 @@ import sys
 import importlib
 
 # Define the path to the module directory
-module_path = r"C:\Users\CJ Nowacek\Scripts_Master"
+module_path = r"C:\Scripts_Master"
 
 # Check and reload the 'ToolsetMaster' module if it exists in sys.modules
 for module_name in list(sys.modules.keys()):
