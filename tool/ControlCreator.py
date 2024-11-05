@@ -1,10 +1,9 @@
-__author__ = "CJ Nowacek"
-__credits__ = "CJ Nowacek"
-__license__ = "GPL"
-__version__ = "1.0.2"
-__maintainer__ = "CJ Nowacek"
-__email__ = "cj.nowacek@gmail.com"
-__status__ = "Production"
+"""
+File: ControlCreator.py
+Author: CJ Nowacek
+Created Date: NA
+Description: UI for creating controls at a position
+"""
 
 import maya.cmds as mc
 import maya.mel as mel
@@ -13,7 +12,7 @@ import os
 # TODO add different export types
 # TODO add options for animation?
 
-class main(object):
+class ControlCreator(object):
 
     # constructor
     def __init__(self):
@@ -102,4 +101,9 @@ class main(object):
         self.finalizeControl()
 
 
-# myWindow = ToolOps_ControlCreator()
+
+
+# Main function to run the tool
+def main(*args):
+    dialog = ControlCreator()
+    dialog.show()

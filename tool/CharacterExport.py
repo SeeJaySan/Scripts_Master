@@ -14,14 +14,14 @@ def GetExportMeshes():
     transform_nodes = mc.ls(type='transform')
 
     # Check if any of the transform nodes is named 'Export_Meshes'
-    if 'Export_Meshes' in transform_nodes:
-        mc.select('Export_Meshes')
+    if 'ExportMeshes' in transform_nodes:
+        mc.select('ExportMeshes')
         mc.SelectHierarchy()  # Select all nodes in the hierarchy
         exportMeshes = mc.ls(sl=True)
-        exportMeshes.remove("Export_Meshes")
+        exportMeshes.remove("ExportMeshes")
         return exportMeshes
     else:
-        print("No transform node named 'Export_Meshes' found.")
+        print("No transform node named 'ExportMeshes' found.")
         return []
 
 # Get skeleton to be exported
