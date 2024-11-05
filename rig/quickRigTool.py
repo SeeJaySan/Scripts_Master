@@ -1,7 +1,7 @@
 """
 File: QuickRigTool.py
-Author: [Your Name]
-Created Date: [Today's Date]
+Author: CJ Nowacek
+Created Date: NA
 Description: Quick Rig Tool for creating, editing joints, and creating controls in Maya.
 """
 
@@ -47,11 +47,17 @@ class CreateJointsWidget(QtWidgets.QWidget):
     def create_widgets(self):
         self.button1 = QtWidgets.QPushButton("Start")
         self.button2 = QtWidgets.QPushButton("Aim")
+        self.button3 = QtWidgets.QPushButton("CometOrient")
+        self.button4 = QtWidgets.QPushButton("CometOrient")
 
     def create_layout(self):
-        layout = QtWidgets.QVBoxLayout(self)
-        layout.addWidget(self.button1)
-        layout.addWidget(self.button2)
+        #layout = QtWidgets.QVBoxLayout(self)
+        layout_01 = QtWidgets.QHBoxLayout(self)
+        layout_02 = QtWidgets.QHBoxLayout(self)
+        
+        #layout_01.addWidget(self.button1)
+        #layout_01.addWidget(self.button2)
+        layout_02.addWidget(self.button1)
 
 
 # Widget for editing joints
@@ -140,6 +146,13 @@ class TabWidgetDialog(QtWidgets.QDialog):
         self.EJ_wdg.button2.clicked.connect(self.joint_module.turnOffJointAxisVis)
         
         self.CC_wdg.button1.clicked.connect(self.joint_module.createControl)
+        
+        
+    # Functions
+    def run_comet_joint_orient(self):
+        pass
+
+
 
 
 # Main function to run the tool
