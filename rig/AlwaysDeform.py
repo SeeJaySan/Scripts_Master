@@ -9,8 +9,10 @@ meshSelected = mc.ls(sl=1)
 
 # Get the current file path of the Maya scene
 file_path = mc.file(query=True, sceneName=True)
+print(file_path)
 # Get the directory of the file
 directory = os.path.dirname(file_path)
+print(directory)
 directorySourceimages = directory.replace('scenes', 'sourceimages')
 directorySourceimagesTmp = directory.replace('scenes', 'sourceimages/tmp')
 
@@ -49,7 +51,7 @@ def GetBoneNames():
     return unique_names, list(printed_skin_clusters)
 
 
-def ExportSkinCluster(skin_clusters):
+def ExportSkinCluster(skin_clusters, joint_names):
     """Exports skin weights of the specified skin clusters to a JSON file."""
     if file_path:
         # Ensure necessary directories exist
@@ -60,9 +62,20 @@ def ExportSkinCluster(skin_clusters):
             for skin_cluster in skin_clusters:
                 mc.select(skin_cluster)
                 export_name = f'{meshSelected[0]}_skinWeights.json'
-                export_path = os.path.join(directorySourceimagesTmp, export_name)
+                print (directorySourceimagesTmp)
+                #export_path = os.path.join(directorySourceimagesTmp, export_name)
                 mc.deformerWeights(export_name, ex=True, df=skin_cluster, fm="JSON", p=directorySourceimagesTmp)
-                return export_path
+                mc.skinCluster(skin_cluster, edit=True, unbind=True)
+        
+                # Create a new skin cluster with the specified joints and mesh
+                new_SC = mc.skinCluster(joint_names, meshSelected[0], 
+                                        n=meshSelected[0] + '_SC', 
+                                        toSelectedBones=True, bindMethod=0, 
+                                        skinMethod=0, normalizeWeights=1)
+                import_name = directorySourceimagesTmp + '/' + export_name
+                                        
+                # Import the deformer weights
+                mc.deformerWeights(export_name, im=True, method="index", deformer=new_SC[0], p=directorySourceimagesTmp)
         else:
             print("No skin clusters provided to select.")
     else:
@@ -77,7 +90,7 @@ def createDirectory(dirPath):
     else:
         print(f"\nDirectory already exists: {dirPath}")
 
-
+'''
 def resetMeshSkinCluster(skin_clusters, joint_names, exportedSkinClusterPath):
     """Rebinds the skin cluster to the mesh and imports the exported weights."""
     for skin_cluster in skin_clusters:
@@ -93,7 +106,7 @@ def resetMeshSkinCluster(skin_clusters, joint_names, exportedSkinClusterPath):
         # Import the deformer weights
         export_name = f'{meshSelected[0]}_skinWeights.json'
         mc.deformerWeights(export_name, im=True, method="index", deformer=new_SC[0])  
-
+'''
 
 def run():
     """Main function to run the skin cluster export and reset."""
@@ -118,8 +131,7 @@ def run():
         print('No skin clusters found.')
 
     # Export and reset skin cluster
-    exportedSkinClusterPath = ExportSkinCluster(skin_clusters)
-    resetMeshSkinCluster(skin_clusters, joint_names, exportedSkinClusterPath)
+    ExportSkinCluster(skin_clusters, joint_names)
 
 
 # Execute the script
