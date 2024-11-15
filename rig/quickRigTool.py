@@ -47,18 +47,18 @@ class CreateJointsWidget(QtWidgets.QWidget):
     def create_widgets(self):
         self.button1 = QtWidgets.QPushButton("Start")
         self.button2 = QtWidgets.QPushButton("Aim")
-        self.button3 = QtWidgets.QPushButton("CometOrient")
-        self.button4 = QtWidgets.QPushButton("CometOrient")
+        self.button3 = QtWidgets.QPushButton("Aim")
+        self.button4 = QtWidgets.QPushButton("Aim")
 
     def create_layout(self):
-        #layout = QtWidgets.QVBoxLayout(self)
-        layout_01 = QtWidgets.QHBoxLayout(self)
-        layout_02 = QtWidgets.QHBoxLayout(self)
+        # Show/Hide Axis Buttons
+        layout = QtWidgets.QHBoxLayout(self)
+        #layout.setAlignment(layout, QtWidgets.AlignmentFlag.AlignTop)
+        layout.addWidget(self.button1)
+        layout.addWidget(self.button2)
         
-        #layout_01.addWidget(self.button1)
-        #layout_01.addWidget(self.button2)
-        layout_02.addWidget(self.button1)
-
+        layout2 = QtWidgets.QHBoxLayout(self)
+        layout2.addWidget(self.button3)
 
 # Widget for editing joints
 class EditJointsWidget(QtWidgets.QWidget):
