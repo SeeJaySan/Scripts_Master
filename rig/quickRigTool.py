@@ -51,14 +51,14 @@ class CreateJointsWidget(QtWidgets.QWidget):
         self.button4 = QtWidgets.QPushButton("Aim")
 
     def create_layout(self):
-        # Show/Hide Axis Buttons
-        layout = QtWidgets.QHBoxLayout(self)
-        #layout.setAlignment(layout, QtWidgets.AlignmentFlag.AlignTop)
-        layout.addWidget(self.button1)
-        layout.addWidget(self.button2)
+        #layout = QtWidgets.QVBoxLayout(self)
+        layout_01 = QtWidgets.QHBoxLayout(self)
+        layout_02 = QtWidgets.QHBoxLayout(self)
         
-        layout2 = QtWidgets.QHBoxLayout(self)
-        layout2.addWidget(self.button3)
+        #layout_01.addWidget(self.button1)
+        #layout_01.addWidget(self.button2)
+        layout_02.addWidget(self.button1)
+
 
 # Widget for editing joints
 class EditJointsWidget(QtWidgets.QWidget):

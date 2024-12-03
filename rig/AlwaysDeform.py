@@ -1,5 +1,6 @@
 import os
 from maya import cmds as mc
+from msc import directoryUtils as dU
 
 # TODO: Add functionality for multiple meshes
 
@@ -55,8 +56,8 @@ def ExportSkinCluster(skin_clusters, joint_names):
     """Exports skin weights of the specified skin clusters to a JSON file."""
     if file_path:
         # Ensure necessary directories exist
-        createDirectory(directorySourceimages)
-        createDirectory(directorySourceimagesTmp)
+        dU.createDirectory(directorySourceimages)
+        dU.createDirectory(directorySourceimagesTmp)
 
         if skin_clusters:
             for skin_cluster in skin_clusters:
@@ -71,6 +72,7 @@ def ExportSkinCluster(skin_clusters, joint_names):
                 new_SC = mc.skinCluster(joint_names, meshSelected[0], 
                                         n=meshSelected[0] + '_SC', 
                                         toSelectedBones=True, bindMethod=0, 
+                                        maximumInfluences = 4,
                                         skinMethod=0, normalizeWeights=1)
                 import_name = directorySourceimagesTmp + '/' + export_name
                                         
@@ -80,15 +82,7 @@ def ExportSkinCluster(skin_clusters, joint_names):
             print("No skin clusters provided to select.")
     else:
         print("No valid scene file found.")
-
-
-def createDirectory(dirPath):
-    """Creates a directory if it does not exist."""
-    if not os.path.exists(dirPath):
-        os.makedirs(dirPath)
-        print(f"\nDirectory created: {dirPath}")
-    else:
-        print(f"\nDirectory already exists: {dirPath}")
+        
 
 '''
 def resetMeshSkinCluster(skin_clusters, joint_names, exportedSkinClusterPath):

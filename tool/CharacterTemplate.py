@@ -1,20 +1,20 @@
-import maya.cmds as mc
-import maya.mel as mel
-from maya import OpenMaya as om
-from maya import OpenMayaUI as omui
+import maya.cmds as cmds
 
-NAME = 'Robin'
+def main(*args):
+    CharacterTemplate()
 
-def charaterTemplate(charactername = '_'):
-    mc.createNode('transform', n='GEO')
-    mc.createNode('transform', n='SKL')
-    mc.createNode('transform', n='RIG')
-    mc.createNode('transform', n='CON')
-    mc.select(cl=1)
-    
-    mc.createNode('transform', n='{}_template_Grp'.format(charactername))
-    mc.select(cl=1)
-    
-    mc.parent('GEO', 'SKL', 'RIG', 'CON', '{}_template_Grp'.format(charactername))
-    
-charaterTemplate(charactername = NAME)
+def CharacterTemplate():
+    # Create the top-level node
+    rig_node = cmds.createNode('transform', name='RIG')
+
+    # Create 'Meshes' and 'Skeleton' nodes under 'RIG'
+    meshes_node = cmds.createNode('transform', name='Meshes', parent=rig_node)
+    skeleton_node = cmds.createNode('transform', name='Skeleton', parent=rig_node)
+
+    # Create 'ExportMeshes' and 'bak' nodes under 'Meshes'
+    export_meshes_node = cmds.createNode('transform', name='ExportMeshes', parent=meshes_node)
+    bak_node = cmds.createNode('transform', name='bak', parent=meshes_node)
+
+    # Print the created hierarchy for verification
+    print("Hierarchy created:")
+    print(cmds.ls(rig_node, dag=True))

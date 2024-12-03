@@ -1,173 +1,261 @@
-from PySide2.QtWidgets import QApplication, QWidget, QPushButton, QCheckBox, QLineEdit, QSlider, QRadioButton, QButtonGroup, QHBoxLayout, QVBoxLayout, QGroupBox, QLabel, QComboBox, QSpinBox
-from PySide2.QtCore import Qt
+from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
 import maya.OpenMayaUI as omui
 from shiboken2 import wrapInstance
 import maya.cmds as cmds
+
+from PySide2.QtWidgets import QApplication, QWidget, QPushButton, QCheckBox, QLineEdit, QSlider, QRadioButton, QButtonGroup, QHBoxLayout, QVBoxLayout, QGroupBox, QLabel, QComboBox, QSpinBox, QSizePolicy, QTabWidget
+from PySide2.QtCore import Qt
+import time
+
 from msc import jointCreateAndOrientatorModule as jCO
-from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
+
 
 def print_widget_name(widget_name):
     print(f"Widget '{widget_name}' was interacted with.")
 
+
 def get_maya_main_window():
     main_window_ptr = omui.MQtUtil.mainWindow()
     return wrapInstance(int(main_window_ptr), QWidget)
+
 
 class QuickToolsWindow(MayaQWidgetDockableMixin, QWidget):
     def __init__(self, parent=None):
         super(QuickToolsWindow, self).__init__(parent=parent)
         self.setWindowTitle("Quick Tools")
         self.setObjectName("QuickToolsWindow")
-        
-        self.joint_module = jCO.jointCreateAndOrientator()
-        
-        main_layout = QVBoxLayout(self)
-        
-        jointAxisVis_wdgt = QHBoxLayout(self)
-        showAxis_Btn = QPushButton("Show Axis")
-        hideAxis_Btn = QPushButton("Hide Axis")
-        showAxis_Btn.clicked.connect(self.joint_module.turnOnJointAxisVis)
-        hideAxis_Btn.clicked.connect(self.joint_module.turnOffJointAxisVis)
-        jointAxisVis_wdgt.addWidget(showAxis_Btn)
-        jointAxisVis_wdgt.addWidget(hideAxis_Btn)
-        
-        CreateAim_wdgt = QHBoxLayout(self)
-        createJnt_Btn = QPushButton("Joint at component")
-        aimJnt_Btn = QPushButton("Aim at component")
-        createJnt_Btn.clicked.connect(self.joint_module.createBaseJoint)
-        aimJnt_Btn.clicked.connect(self.joint_module.endBaseJoint)
-        CreateAim_wdgt.addWidget(createJnt_Btn)
-        CreateAim_wdgt.addWidget(aimJnt_Btn)
-        
-        aimRadioButtons_wdgt = QHBoxLayout(self)
-        radioButtons1_lb = QLabel("Aim")
-        radioButtonX = QRadioButton("X")
-        radioButtonY = QRadioButton("Y")
-        radioButtonZ = QRadioButton("Z")
-        aimReverse_Cbx = QCheckBox("Reverse")
-        aimReverse_Cbx.stateChanged.connect(lambda: print_widget_name('CheckBox'))
-        radioButtonGroup = QButtonGroup(self)
-        radioButtonGroup.addButton(radioButtonX)
-        radioButtonGroup.addButton(radioButtonY)
-        radioButtonGroup.addButton(radioButtonZ)
-        radioButtonGroup.buttonClicked.connect(lambda: print_widget_name('QRadioButton'))
-        radioButtonGroup.buttonClicked.connect(lambda: print_widget_name('QRadioButton'))
-        radioButtonGroup.buttonClicked.connect(lambda: print_widget_name('QRadioButton'))
-        aimRadioButtons_wdgt.addWidget(radioButtons1_lb)
-        aimRadioButtons_wdgt.addWidget(radioButtonX)
-        aimRadioButtons_wdgt.addWidget(radioButtonY)
-        aimRadioButtons_wdgt.addWidget(radioButtonZ)
-        aimRadioButtons_wdgt.addWidget(aimReverse_Cbx)
 
-        upRadioButtons_wdgt = QHBoxLayout(self)
-        radioButtons2_lb = QLabel("Up")
-        radioButtonX = QRadioButton("X")
-        radioButtonY = QRadioButton("Y")
-        radioButtonZ = QRadioButton("Z")
-        upReverse_Cbx = QCheckBox("Reverse")
-        upReverse_Cbx.stateChanged.connect(lambda: print_widget_name('CheckBox'))
-        radioButtonGroup = QButtonGroup(self)
-        radioButtonGroup.addButton(radioButtonX)
-        radioButtonGroup.addButton(radioButtonY)
-        radioButtonGroup.addButton(radioButtonZ)
-        radioButtonGroup.buttonClicked.connect(lambda: print_widget_name('QRadioButton'))
-        radioButtonGroup.buttonClicked.connect(lambda: print_widget_name('QRadioButton'))
-        radioButtonGroup.buttonClicked.connect(lambda: print_widget_name('QRadioButton'))
-        upRadioButtons_wdgt.addWidget(radioButtons2_lb)
-        upRadioButtons_wdgt.addWidget(radioButtonX)
-        upRadioButtons_wdgt.addWidget(radioButtonY)
-        upRadioButtons_wdgt.addWidget(radioButtonZ)
-        upRadioButtons_wdgt.addWidget(upReverse_Cbx)
+        # Initialize the joint module
+        self.joint_module = jCO.jointCreateAndOrientator()
+
+        # Create the main layout and the tab widget
+        main_layout = QVBoxLayout(self)
+
+        # Create tab widget
+        self.tabs = QTabWidget(self)
+        main_layout.addWidget(self.tabs)
+
+        # Create widgets for the first tab
+        first_tab = QWidget()
+        first_tab_layout = self.create_first_tab()
+        first_tab.setLayout(first_tab_layout)
+
+        # Create widgets for the second tab
+        second_tab = QWidget()
+        second_tab_layout = self.create_second_tab()
+        second_tab.setLayout(second_tab_layout)
+
+        # Add tabs to the tab widget
+        self.tabs.addTab(first_tab, "Quick Tools")
+        self.tabs.addTab(second_tab, "Second Tab")
+
+        # Set main layout to the window
+        self.setLayout(main_layout)
+
+    def create_first_tab(self):
+        """Create layout for the first tab (Quick Tools)."""
+        layout = QVBoxLayout()
+
+        # Add widgets for the first tab here (same as current QuickToolsWindow layout)
+        joint_axis_wdgt = self.create_joint_axis_widget()
+        layout.addLayout(joint_axis_wdgt)
+
+        create_aim_wdgt = self.create_create_aim_widgets()
+        layout.addLayout(create_aim_wdgt)
+
+        aim_radio_buttons_wdgt = self.create_axis_radio_group("Aim")
+        layout.addWidget(aim_radio_buttons_wdgt)
+
+        up_radio_buttons_wdgt = self.create_axis_radio_group("Up")
+        layout.addWidget(up_radio_buttons_wdgt)
+
+        orient_joints_wdgt = self.create_orient_joints_widget()
+        layout.addLayout(orient_joints_wdgt)
+
+
+
+        layout4 = self.create_slider_widget()
+        layout.addLayout(layout4)
+
+        layout6 = self.create_combo_box_widget()
+        layout.addLayout(layout6)
+
+        layout7 = self.create_spin_box_widget()
+        layout.addLayout(layout7)
+
+        layout8 = self.create_label_widget()
+        layout.addLayout(layout8)
+
+        return layout
+
+    def create_second_tab(self):
+        """Create layout for the second tab."""
+        layout = QVBoxLayout()
         
-        upRadioButtons_wdgta = QHBoxLayout(self)
-        orintJoints_Btn = QPushButton("Orient Joints")
-        upRadioButtons_wdgta.addWidget(orintJoints_Btn)
-        
-        srRename_wdgt = QHBoxLayout(self)
+        sr_rename_wdgt, ps_rename_wdgt = self.create_rename_widgets()
+        layout.addLayout(sr_rename_wdgt)
+        layout.addLayout(ps_rename_wdgt)
+
+        # Add some placeholder widgets or tools for the second tab
+        label = QLabel("This is the second tab")
+        label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(label)
+
+        # You can add more tools or functionality for the second tab here
+        button = QPushButton("Button in Second Tab")
+        button.clicked.connect(lambda: print_widget_name("Second Tab Button"))
+        layout.addWidget(button)
+
+        return layout
+
+    def create_joint_axis_widget(self):
+        """Widget for controlling joint axis visibility."""
+        joint_axis_wdgt = QHBoxLayout(self)
+        show_axis_btn = QPushButton("Show Axis")
+        hide_axis_btn = QPushButton("Hide Axis")
+        show_axis_btn.clicked.connect(self.joint_module.turnOnJointAxisVis)
+        hide_axis_btn.clicked.connect(self.joint_module.turnOffJointAxisVis)
+        joint_axis_wdgt.addWidget(show_axis_btn)
+        joint_axis_wdgt.addWidget(hide_axis_btn)
+        return joint_axis_wdgt
+
+    def create_create_aim_widgets(self):
+        """Widget for creating and aiming joints."""
+        create_aim_wdgt = QHBoxLayout(self)
+        create_jnt_btn = QPushButton("Joint at component")
+        aim_jnt_btn = QPushButton("Aim at component")
+        create_jnt_btn.clicked.connect(self.joint_module.createBaseJoint)
+        aim_jnt_btn.clicked.connect(self.joint_module.endBaseJoint)
+        create_aim_wdgt.addWidget(create_jnt_btn)
+        create_aim_wdgt.addWidget(aim_jnt_btn)
+        return create_aim_wdgt
+
+    def create_axis_radio_group(self, label):
+        """Helper function to create a horizontal radio button group for axis selection."""
+        group_box = QGroupBox(label)
+        parentlayout = QVBoxLayout()  # Parent layout for the group box
+
+        # Create a horizontal layout for the radio buttons
+        layout = QHBoxLayout()
+        radio_button_x = QRadioButton("X")
+        radio_button_y = QRadioButton("Y")
+        radio_button_z = QRadioButton("Z")
+
+        # Add the radio buttons to the horizontal layout
+        layout.addWidget(radio_button_x)
+        layout.addWidget(radio_button_y)
+        layout.addWidget(radio_button_z)
+
+        # Create a QWidget to hold the layout and add it to the parent layout
+        axis_widget = QWidget()
+        axis_widget.setLayout(layout)
+        # Add the QWidget to the parent layout
+        parentlayout.addWidget(axis_widget)
+
+        # Align the radio buttons to the top
+        parentlayout.setAlignment(Qt.AlignTop)
+        group_box.setLayout(parentlayout)  # Set the layout for the group box
+
+        # Set size policy for the group box to avoid stretching
+        group_box.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
+        return group_box  # Return the full group box widget
+
+    def create_orient_joints_widget(self):
+        """Widget for orienting joints."""
+        orient_joints_wdgt = QHBoxLayout(self)
+        orient_jnts_btn = QPushButton("Orient Joints")
+        orient_joints_wdgt.addWidget(orient_jnts_btn)
+        return orient_joints_wdgt
+
+    def create_rename_widgets(self):
+        """Widget for search/replace and prefix/suffix renaming."""
+        sr_rename_wdgt = QHBoxLayout(self)
         search_lb = QLabel("Search")
         search_le = QLineEdit("")
-        repalce_lb = QLabel("Replace")
-        repalce_le = QLineEdit("")
-        srRename_wdgt.addWidget(search_lb)
-        srRename_wdgt.addWidget(search_le)
-        srRename_wdgt.addWidget(repalce_lb)
-        srRename_wdgt.addWidget(repalce_le)
-        
-        psRename_wdgt = QHBoxLayout(self)
+        replace_lb = QLabel("Replace")
+        replace_le = QLineEdit("")
+        sr_rename_wdgt.addWidget(search_lb)
+        sr_rename_wdgt.addWidget(search_le)
+        sr_rename_wdgt.addWidget(replace_lb)
+        sr_rename_wdgt.addWidget(replace_le)
+
+        ps_rename_wdgt = QHBoxLayout(self)
         prefix_lb = QLabel("Prefix")
         prefix_le = QLineEdit("")
         suffix_lb = QLabel("Suffix")
         suffix_le = QLineEdit("")
-        psRename_wdgt.addWidget(prefix_lb)
-        psRename_wdgt.addWidget(prefix_le)
-        psRename_wdgt.addWidget(suffix_lb)
-        psRename_wdgt.addWidget(suffix_le)
-        
-        layout4 = QVBoxLayout(self)
+        ps_rename_wdgt.addWidget(prefix_lb)
+        ps_rename_wdgt.addWidget(prefix_le)
+        ps_rename_wdgt.addWidget(suffix_lb)
+        ps_rename_wdgt.addWidget(suffix_le)
+
+        return sr_rename_wdgt, ps_rename_wdgt  # Return both layouts as a tuple
+
+    def create_slider_widget(self):
+        """Placeholder widget for slider."""
+        layout = QVBoxLayout(self)
         slider = QSlider(Qt.Horizontal)
         slider.valueChanged.connect(lambda: print_widget_name('QSlider'))
-        layout4.addWidget(slider)
-        
-        layout6 = QVBoxLayout(self)
-        comboBox = QComboBox()
-        comboBox.addItems(["Choice 1", "Choice 2", "Choice 3"])
-        comboBox.currentIndexChanged.connect(lambda: print_widget_name('QComboBox'))
-        layout6.addWidget(comboBox)
-        
-        layout7 = QVBoxLayout(self)
-        spinBox = QSpinBox()
-        spinBox.valueChanged.connect(lambda: print_widget_name('QSpinBox'))
-        layout7.addWidget(spinBox)
-        
-        layout8 = QVBoxLayout(self)
+        layout.addWidget(slider)
+        return layout
+
+    def create_combo_box_widget(self):
+        """Placeholder widget for combo box."""
+        layout = QVBoxLayout(self)
+        combo_box = QComboBox()
+        combo_box.addItems(["Choice 1", "Choice 2", "Choice 3"])
+        combo_box.currentIndexChanged.connect(
+            lambda: print_widget_name('QComboBox'))
+        layout.addWidget(combo_box)
+        return layout
+
+    def create_spin_box_widget(self):
+        """Placeholder widget for spin box."""
+        layout = QVBoxLayout(self)
+        spin_box = QSpinBox()
+        spin_box.valueChanged.connect(lambda: print_widget_name('QSpinBox'))
+        layout.addWidget(spin_box)
+        return layout
+
+    def create_label_widget(self):
+        """Placeholder widget for a label."""
+        layout = QVBoxLayout(self)
         label = QLabel("This is a label")
         label.setAlignment(Qt.AlignTop)
-        layout8.addWidget(label)
-        
-        main_layout.addLayout(jointAxisVis_wdgt)
-        main_layout.addLayout(CreateAim_wdgt)
-        main_layout.addLayout(aimRadioButtons_wdgt)
-        main_layout.addLayout(upRadioButtons_wdgt)
-        main_layout.addLayout(upRadioButtons_wdgta)
-        main_layout.addLayout(srRename_wdgt)
-        main_layout.addLayout(psRename_wdgt)
-        main_layout.addLayout(layout4)
-        main_layout.addLayout(layout6)
-        main_layout.addLayout(layout7)
-        main_layout.addLayout(layout8)
+        layout.addWidget(label)
+        return layout
 
-        self.setLayout(main_layout)
-        
-    def create_axis_radio_group(self, label):
-        """ Helper function to create a horizontal radio button group for axis selection. """
-        group_box = QGroupBox(label)
-        layout = QHBoxLayout()  # Change layout to horizontal
-        layout.addWidget(QRadioButton("X"))
-        layout.addWidget(QRadioButton("Y"))
-        layout.addWidget(QRadioButton("Z"))
-        group_box.setLayout(layout)
-        return group_box
-        
-        
+
 def show_dockable_widget():
     global tm_tab_window
-    
+
+    # Try to delete the UI (the window) if it already exists
+    try:
+        if tm_tab_window is not None:
+            tm_tab_window.close()  # Close the window first
+            tm_tab_window.deleteLater()  # Delete the window after closing it
+            tm_tab_window = None  # Set the global variable to None
+    except Exception as e:
+        print(f"Error deleting the UI: {e}")
+        
     # Define a unique name for the workspace control
     workspace_control_name = "QuickToolsWindowWorkspaceControl"
-    
-    # Check if the workspace control already exists and delete it
-    if cmds.workspaceControl(workspace_control_name, exists=True):
-        cmds.deleteUI(workspace_control_name, control=True)
-    
-    # Create a new instance of QuickToolsWindow
-    tm_tab_window = QuickToolsWindow()
-    
-    # Show the widget as dockable
-    tm_tab_window.show(dockable=True, area='right', floating=False, uiScript="")
-    
-    # Rename the workspace control to our unique name
-    cmds.workspaceControl(tm_tab_window.objectName(), edit=True, label="PySide Dockable", retain=False, tabToControl=[workspace_control_name, -1])
-    cmds.rename(tm_tab_window.objectName(), workspace_control_name)
 
-# Call the function to show the dockable widget
+
+    # Create the main window and set the parent
+    tm_tab_window = QuickToolsWindow()
+
+    # Create the workspace control if it doesn't exist
+    if not cmds.workspaceControl(workspace_control_name, exists=True):
+        cmds.workspaceControl(workspace_control_name, label="Quick Tools")
+
+    # Make the widget dockable by attaching it to the workspace control
+    cmds.workspaceControl(workspace_control_name, edit=True, uiScript=workspace_control_name)
+
+    # Show the window
+    tm_tab_window.show()
+
+
+# Execute the show function when running the script
 show_dockable_widget()

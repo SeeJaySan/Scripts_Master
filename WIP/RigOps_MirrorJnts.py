@@ -4,9 +4,9 @@ from maya import OpenMaya as om
 from maya import OpenMayaUI as omui
 
 def main():
-    AnimOps_Macros()
+    MirrorJoints()
 
-def main(mirrorbehaviour=True):
+def MirrorJoints(mirrorbehaviour=True):
     selList = []
 
     sel = mc.ls(sl=1)
@@ -21,7 +21,7 @@ def main(mirrorbehaviour=True):
     mirrorjnt = mc.joint(n="mirror_joint", p=[0, 0, 0])
 
     mc.parent(sel[:], mirrorjnt)
-    mc.mirrorJoint(mirrorjnt, mb=mirrorbehaviour, mirrorYZ=True, sr=("L_", "R_"))
+    mc.mirrorJoint(mirrorjnt, mb=mirrorbehaviour, mirrorYZ=True, sr=("_l", "_r"))
     topjoint = mc.ls(sl=1)
     newjoints = mc.listRelatives(children=True)
 
