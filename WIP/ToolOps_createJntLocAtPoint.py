@@ -4,7 +4,7 @@ def create_JNT_LOC():
     #create a jnt and locator at point of selected object
 
     sel = cmds.ls (sl = 1)
-    print sel
+    print (sel)
     
     LOC = cmds.spaceLocator ( p=(0,0,0))
     
