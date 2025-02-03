@@ -333,7 +333,7 @@ def createFKControls(bone):
     for i in range(len(controlList)):
         mc.parentConstraint(controlList[i], boneList[i] + "_fk", mo=True)
 
-    for i in range(len((controlList) - 1)):
+    for i in range(len(controlList) - 1):
         mc.parent(groupList[i + 1], controlList[i])
 
 
