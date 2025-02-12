@@ -7,7 +7,7 @@ from PySide2.QtWidgets import QApplication, QWidget, QPushButton, QCheckBox, QLi
 from PySide2.QtCore import Qt
 import time
 
-from msc import jointCreateAndOrientatorModule as jCO
+from msc.modules import Utils_JointCreateAndOrientatorModule as jCO
 
 
 def print_widget_name(widget_name):
@@ -22,8 +22,8 @@ def get_maya_main_window():
 class QuickToolsWindow(MayaQWidgetDockableMixin, QWidget):
     def __init__(self, parent=None):
         super(QuickToolsWindow, self).__init__(parent=parent)
-        self.setWindowTitle("Quick Tools")
-        self.setObjectName("QuickToolsWindow")
+        self.setWindowTitle("RigMaster")
+        self.setObjectName("RigMasterWindow")
 
         # Initialize the joint module
         self.joint_module = jCO.jointCreateAndOrientator()

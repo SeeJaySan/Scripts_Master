@@ -1,6 +1,6 @@
 import os
 from maya import cmds as mc
-from msc import directoryUtils as dU
+from msc.modules import Utils_Directories as Ud
 
 # TODO: Add functionality for multiple meshes
 
@@ -56,8 +56,8 @@ def ExportSkinCluster(skin_clusters, joint_names):
     """Exports skin weights of the specified skin clusters to a JSON file."""
     if file_path:
         # Ensure necessary directories exist
-        dU.createDirectory(directorySourceimages)
-        dU.createDirectory(directorySourceimagesTmp)
+        Ud.createDirectory(directorySourceimages)
+        Ud.createDirectory(directorySourceimagesTmp)
 
         if skin_clusters:
             for skin_cluster in skin_clusters:

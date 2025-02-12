@@ -6,7 +6,11 @@ import json
 def main(*args):
     launch_ui()
     
-desktop_path = os.path.join(os.path.expanduser("~"), "Desktop", "tmp.json")
+filepath = cmds.file(q=True, sn=True)
+filename = os.path.basename(filepath)
+raw_name, extension = os.path.splitext(filename)
+
+desktop_path = os.path.join(os.path.expanduser("~"), "Desktop", "characterCompilerTest", f"{raw_name}_skeleton.json")
 
 def get_bone_data():
     bones = cmds.ls(type="joint")

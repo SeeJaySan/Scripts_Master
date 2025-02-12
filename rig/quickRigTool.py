@@ -24,7 +24,7 @@ from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
 from msc.third_party import zbw_controlShapes as zbw_con
 
 # IMPORT Local Modules
-from msc import jointCreateAndOrientatorModule as jCO
+from msc.modules import Utils_JointCreateAndOrientatorModule as jCO
 
 
 # Function to return the Maya main window as a Python object

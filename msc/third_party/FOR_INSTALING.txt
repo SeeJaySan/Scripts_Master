@@ -1,3 +1,0 @@
-the general info is to copy the folder to:
-
-MyDocuments\Maya\scripts\
