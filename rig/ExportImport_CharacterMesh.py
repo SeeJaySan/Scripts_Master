@@ -180,25 +180,13 @@ def import_meshes():
     print("Meshes imported and textures re-linked.")
 
 def export_mesh_weights():
-    """Exports skin weights of selected meshes and saves to a JSON file."""
+    """Exports skin weights of selected meshes using Maya's deformerWeights tool."""
     dir_path = os.path.join(os.path.expanduser("~"), "Desktop", "characterCompilerTest")
-    weights_file = os.path.join(dir_path, "mesh_weights.json")
+    os.makedirs(dir_path, exist_ok=True)  # Ensure the directory exists
 
-    mesh_weights = {}
-
-    selected_transforms = cmds.ls(selection=True, type="transform")
-    if not selected_transforms:
-        print("No meshes selected!")
-        return
-
-    selected_meshes = []
-    for transform in selected_transforms:
-        shapes = cmds.listRelatives(transform, shapes=True, type="mesh")
-        if shapes:
-            selected_meshes.append(transform)
-
+    selected_meshes = cmds.ls(selection=True, type="transform")
     if not selected_meshes:
-        print("No valid mesh objects found!")
+        print("No meshes selected!")
         return
 
     for mesh in selected_meshes:
@@ -207,105 +195,85 @@ def export_mesh_weights():
             print(f"[WARNING] No skinCluster found for {mesh}, skipping weight export.")
             continue
 
-        skin_cluster = skin_clusters[0]  # Assume only one skinCluster per mesh
-        influences = cmds.skinCluster(skin_cluster, query=True, influence=True)  # Get all joints affecting mesh
-        vertex_count = cmds.polyEvaluate(mesh, vertex=True)  # Number of vertices
+        skin_cluster = skin_clusters[0]  # Get the first skinCluster found
+        weight_file = f"{mesh}_weights.json"  # Name of JSON file for this mesh
+        weight_path = os.path.join(dir_path, weight_file)
 
-        mesh_weights[mesh] = {}
+        # Export skin weights using deformerWeights as JSON
+        cmds.deformerWeights(weight_file, export=True, path=dir_path, deformer=skin_cluster, format="JSON")
 
-        for i in range(vertex_count):
-            vertex = f"{mesh}.vtx[{i}]"  # Construct vertex name
-            weights = cmds.skinPercent(skin_cluster, vertex, query=True, value=True)  # Get joint weights
-            mesh_weights[mesh][i] = dict(zip(influences, weights))  # Store as {joint: weight}
-
-    # Save weight data to JSON
-    with open(weights_file, "w") as file:
-        json.dump(mesh_weights, file, indent=4)
-
-    print(f"Skin weights exported to {weights_file}")
+        print(f"✅ Exported weights for {mesh} to {weight_path}")
 
 def import_mesh_weights():
-    """Imports skin weights from JSON and applies them to imported meshes."""
+    """Imports skin weights from JSON and applies them to imported meshes using deformerWeights."""
     dir_path = os.path.join(os.path.expanduser("~"), "Desktop", "characterCompilerTest")
-    weights_file = os.path.join(dir_path, "mesh_weights.json")
-
-    if not os.path.exists(weights_file):
-        print("No mesh_weights.json found!")
-        return
-
-    with open(weights_file, "r") as file:
-        mesh_weights = json.load(file)
-
-    for mesh, vertex_weights in mesh_weights.items():
-        if not cmds.objExists(mesh):
-            print(f"[WARNING] {mesh} not found in the scene, skipping weight import.")
-            continue
-
-        skin_clusters = cmds.ls(cmds.listHistory(mesh), type="skinCluster")
-        if not skin_clusters:
-            print(f"[WARNING] No skinCluster found for {mesh}, skipping weight import.")
-            continue
-
-        skin_cluster = skin_clusters[0]
-
-        for vertex_index, weights in vertex_weights.items():
-            vertex = f"{mesh}.vtx[{vertex_index}]"  # Construct vertex name
-            for joint, weight in weights.items():
-                if cmds.objExists(joint):  # Ensure the joint exists before assigning weight
-                    cmds.skinPercent(skin_cluster, vertex, transformValue=[(joint, weight)])
-
-    print("Skin weights successfully imported and applied.")
-
-def export_mesh_weights_json():
-    """Exports skin weights of selected meshes using Maya's deformerWeights command."""
-    dir_path = os.path.join(os.path.expanduser("~"), "Desktop", "characterCompilerTest")
-    weights_file = os.path.join(dir_path, "mesh_weights.json")
 
     selected_meshes = cmds.ls(selection=True, type="transform")
     if not selected_meshes:
         print("No meshes selected!")
         return
 
-    cmds.progressWindow(
-        title="Exporting Weights",
-        progress=0,
-        maxValue=len(selected_meshes),
-        status="Exporting...",
-        isInterruptable=True,
-    )
+    for mesh in selected_meshes:
+        weight_file = f"{mesh}_weights.json"
+        weight_path = os.path.join(dir_path, weight_file)
 
-    for i, mesh in enumerate(selected_meshes):
-        if cmds.progressWindow(query=True, isCancelled=True):
-            print("Export cancelled.")
-            cmds.progressWindow(endProgress=True)
-            return
-
-        skin_clusters = cmds.ls(cmds.listHistory(mesh), type="skinCluster")
-        if not skin_clusters:
-            print(f"[WARNING] No skinCluster found for {mesh}, skipping weight export.")
+        if not os.path.exists(weight_path):
+            print(f"[WARNING] No weight file found for {mesh}, skipping weight import.")
             continue
 
-        skin_cluster = skin_clusters[0]
+        print(f"🔄 Importing weights for: {mesh}")
 
-        # Define unique weight file for each mesh
-        weight_filename = f"{mesh}_weights.json"
-        weight_filepath = os.path.join(dir_path, weight_filename)
+        # **Unlock transformations to prevent import errors**
+        for attr in ["translateX", "translateY", "translateZ", "rotateX", "rotateY", "rotateZ", "scaleX", "scaleY", "scaleZ"]:
+            if cmds.getAttr(f"{mesh}.{attr}", lock=True):
+                cmds.setAttr(f"{mesh}.{attr}", lock=False)
+                print(f"🔓 Unlocked {attr} on {mesh}")
 
-        # Export weights using deformerWeights
-        cmds.deformerWeights(
-            weight_filename,
-            export=True,
-            path=dir_path,
-            deformer=skin_cluster,
-            format="JSON",
-        )
+        # **Duplicate mesh to prevent weight mismatch**
+        dup_mesh = cmds.duplicate(mesh, name=f"{mesh}_dup")[0]
 
-        print(f"Exported weights for {mesh} to {weight_filepath}")
+        # **Find or recreate the skinCluster for the original mesh**
+        skin_clusters = cmds.ls(cmds.listHistory(mesh), type="skinCluster")
+        if not skin_clusters:
+            print(f"[INFO] No skinCluster found on {mesh}, binding joints before importing weights.")
+            
+            # Get all joints in the scene
+            joints = cmds.ls(type="joint")
+            if not joints:
+                print(f"[ERROR] No joints found, cannot bind {mesh}. Skipping weight import.")
+                cmds.delete(dup_mesh)  # Cleanup duplicate
+                continue
 
+            # **Rebind joints to ensure correct influence**
+            skin_cluster = cmds.skinCluster(joints, mesh, toSelectedBones=True, normalizeWeights=0)[0]  # **Fix: normalizeWeights=0 prevents auto-normalization**
+        else:
+            skin_cluster = skin_clusters[0]
 
+        # **Fix: Get the correct skinCluster for the duplicated mesh**
+        dup_skin_clusters = cmds.ls(cmds.listHistory(dup_mesh), type="skinCluster")
+        if not dup_skin_clusters:
+            print(f"[INFO] No skinCluster found on {dup_mesh}, creating one for weight transfer.")
+            dup_skin_cluster = cmds.skinCluster(cmds.skinCluster(skin_cluster, query=True, influence=True), dup_mesh, toSelectedBones=True, normalizeWeights=0)[0]
+        else:
+            dup_skin_cluster = dup_skin_clusters[0]
 
-    print(f"All skin weights exported to {dir_path}")
+        # **Delete old skinCluster and reapply new one**
+        cmds.delete(skin_cluster)
+        new_skin_cluster = cmds.skinCluster(cmds.skinCluster(dup_skin_cluster, query=True, influence=True), mesh, toSelectedBones=True, normalizeWeights=0)[0]
 
+        # **Import weights using deformerWeights**
+        cmds.deformerWeights(weight_file, im=True, path=dir_path, deformer=new_skin_cluster, method="index", format="JSON")
+
+        # **Copy skin weights from the duplicated mesh to original using correct settings**
+        cmds.copySkinWeights(ss=dup_skin_cluster, ds=new_skin_cluster, 
+                             noMirror=True, 
+                             surfaceAssociation="closestPoint", 
+                             influenceAssociation=["oneToOne", "closestJoint"])
+
+        # **Cleanup: Delete duplicate mesh**
+        cmds.delete(dup_mesh)
+
+        print(f"✅ Successfully imported weights for {mesh}")
 
 
 class MeshToolUI(QtWidgets.QWidget):
