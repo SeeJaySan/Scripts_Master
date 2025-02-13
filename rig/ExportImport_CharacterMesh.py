@@ -4,6 +4,7 @@ import os
 import shutil
 import json
 
+
 def get_texture_path(mesh):
     """Retrieve the texture file path from the material assigned to the mesh."""
     
@@ -44,10 +45,6 @@ def get_texture_path(mesh):
 
     print(f"[WARNING] No valid texture file found for {mesh}")
     return None
-
-
-
-
 
 def export_selected_meshes():
     """Exports selected meshes as OBJ files and saves a JSON file with texture paths."""
@@ -182,25 +179,161 @@ def import_meshes():
 
     print("Meshes imported and textures re-linked.")
 
+def export_mesh_weights():
+    """Exports skin weights of selected meshes and saves to a JSON file."""
+    dir_path = os.path.join(os.path.expanduser("~"), "Desktop", "characterCompilerTest")
+    weights_file = os.path.join(dir_path, "mesh_weights.json")
+
+    mesh_weights = {}
+
+    selected_transforms = cmds.ls(selection=True, type="transform")
+    if not selected_transforms:
+        print("No meshes selected!")
+        return
+
+    selected_meshes = []
+    for transform in selected_transforms:
+        shapes = cmds.listRelatives(transform, shapes=True, type="mesh")
+        if shapes:
+            selected_meshes.append(transform)
+
+    if not selected_meshes:
+        print("No valid mesh objects found!")
+        return
+
+    for mesh in selected_meshes:
+        skin_clusters = cmds.ls(cmds.listHistory(mesh), type="skinCluster")
+        if not skin_clusters:
+            print(f"[WARNING] No skinCluster found for {mesh}, skipping weight export.")
+            continue
+
+        skin_cluster = skin_clusters[0]  # Assume only one skinCluster per mesh
+        influences = cmds.skinCluster(skin_cluster, query=True, influence=True)  # Get all joints affecting mesh
+        vertex_count = cmds.polyEvaluate(mesh, vertex=True)  # Number of vertices
+
+        mesh_weights[mesh] = {}
+
+        for i in range(vertex_count):
+            vertex = f"{mesh}.vtx[{i}]"  # Construct vertex name
+            weights = cmds.skinPercent(skin_cluster, vertex, query=True, value=True)  # Get joint weights
+            mesh_weights[mesh][i] = dict(zip(influences, weights))  # Store as {joint: weight}
+
+    # Save weight data to JSON
+    with open(weights_file, "w") as file:
+        json.dump(mesh_weights, file, indent=4)
+
+    print(f"Skin weights exported to {weights_file}")
+
+def import_mesh_weights():
+    """Imports skin weights from JSON and applies them to imported meshes."""
+    dir_path = os.path.join(os.path.expanduser("~"), "Desktop", "characterCompilerTest")
+    weights_file = os.path.join(dir_path, "mesh_weights.json")
+
+    if not os.path.exists(weights_file):
+        print("No mesh_weights.json found!")
+        return
+
+    with open(weights_file, "r") as file:
+        mesh_weights = json.load(file)
+
+    for mesh, vertex_weights in mesh_weights.items():
+        if not cmds.objExists(mesh):
+            print(f"[WARNING] {mesh} not found in the scene, skipping weight import.")
+            continue
+
+        skin_clusters = cmds.ls(cmds.listHistory(mesh), type="skinCluster")
+        if not skin_clusters:
+            print(f"[WARNING] No skinCluster found for {mesh}, skipping weight import.")
+            continue
+
+        skin_cluster = skin_clusters[0]
+
+        for vertex_index, weights in vertex_weights.items():
+            vertex = f"{mesh}.vtx[{vertex_index}]"  # Construct vertex name
+            for joint, weight in weights.items():
+                if cmds.objExists(joint):  # Ensure the joint exists before assigning weight
+                    cmds.skinPercent(skin_cluster, vertex, transformValue=[(joint, weight)])
+
+    print("Skin weights successfully imported and applied.")
+
+def export_mesh_weights_json():
+    """Exports skin weights of selected meshes using Maya's deformerWeights command."""
+    dir_path = os.path.join(os.path.expanduser("~"), "Desktop", "characterCompilerTest")
+    weights_file = os.path.join(dir_path, "mesh_weights.json")
+
+    selected_meshes = cmds.ls(selection=True, type="transform")
+    if not selected_meshes:
+        print("No meshes selected!")
+        return
+
+    cmds.progressWindow(
+        title="Exporting Weights",
+        progress=0,
+        maxValue=len(selected_meshes),
+        status="Exporting...",
+        isInterruptable=True,
+    )
+
+    for i, mesh in enumerate(selected_meshes):
+        if cmds.progressWindow(query=True, isCancelled=True):
+            print("Export cancelled.")
+            cmds.progressWindow(endProgress=True)
+            return
+
+        skin_clusters = cmds.ls(cmds.listHistory(mesh), type="skinCluster")
+        if not skin_clusters:
+            print(f"[WARNING] No skinCluster found for {mesh}, skipping weight export.")
+            continue
+
+        skin_cluster = skin_clusters[0]
+
+        # Define unique weight file for each mesh
+        weight_filename = f"{mesh}_weights.json"
+        weight_filepath = os.path.join(dir_path, weight_filename)
+
+        # Export weights using deformerWeights
+        cmds.deformerWeights(
+            weight_filename,
+            export=True,
+            path=dir_path,
+            deformer=skin_cluster,
+            format="JSON",
+        )
+
+        print(f"Exported weights for {mesh} to {weight_filepath}")
+
+
+
+    print(f"All skin weights exported to {dir_path}")
+
+
+
 class MeshToolUI(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Mesh Export/Import Tool")
-        self.resize(300, 300)  # Set the window size to 300x300
+        self.resize(300, 400)  # Increase height to fit new buttons
 
         self.setLayout(QtWidgets.QVBoxLayout())
 
         self.export_button = QtWidgets.QPushButton("Export Meshes")
         self.import_button = QtWidgets.QPushButton("Import Meshes")
+        self.export_weights_button = QtWidgets.QPushButton("Export Weights")  # New Button
+        self.import_weights_button = QtWidgets.QPushButton("Import Weights")  # New Button
 
         self.layout().addWidget(self.export_button)
         self.layout().addWidget(self.import_button)
+        self.layout().addWidget(self.export_weights_button)  # Add Button to UI
+        self.layout().addWidget(self.import_weights_button)  # Add Button to UI
 
         self.export_button.clicked.connect(export_selected_meshes)
         self.import_button.clicked.connect(import_meshes)
+        self.export_weights_button.clicked.connect(export_mesh_weights)  # Connect Button
+        self.import_weights_button.clicked.connect(import_mesh_weights)  # Connect Button
 
         self.show()
 mesh_tool_ui = None
+
 
 def launch_mesh_ui():
     global mesh_tool_ui
@@ -209,5 +342,6 @@ def launch_mesh_ui():
         return
     mesh_tool_ui = MeshToolUI()
     mesh_tool_ui.show()
+
 
 launch_mesh_ui()
