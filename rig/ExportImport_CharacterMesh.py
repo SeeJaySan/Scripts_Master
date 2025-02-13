@@ -3,6 +3,7 @@ import maya.cmds as cmds
 import os
 import shutil
 import json
+import heapq
 
 
 def get_texture_path(mesh):
@@ -179,10 +180,14 @@ def import_meshes():
 
     print("Meshes imported and textures re-linked.")
 
+
+
 def export_mesh_weights():
-    """Exports skin weights of selected meshes using Maya's deformerWeights tool."""
+    """Exports skin weights of selected meshes to a JSON file, keeping only the 4 highest influences per vertex."""
     dir_path = os.path.join(os.path.expanduser("~"), "Desktop", "characterCompilerTest")
     os.makedirs(dir_path, exist_ok=True)  # Ensure the directory exists
+
+    weights_data = {}  # Store weights for all selected meshes
 
     selected_meshes = cmds.ls(selection=True, type="transform")
     if not selected_meshes:
@@ -196,82 +201,95 @@ def export_mesh_weights():
             continue
 
         skin_cluster = skin_clusters[0]  # Get the first skinCluster found
-        weight_file = f"{mesh}_weights.json"  # Name of JSON file for this mesh
-        weight_path = os.path.join(dir_path, weight_file)
+        influences = cmds.skinCluster(skin_cluster, query=True, influence=True)  # Get all joints affecting mesh
+        vertex_count = cmds.polyEvaluate(mesh, vertex=True)  # Number of vertices
 
-        # Export skin weights using deformerWeights as JSON
-        cmds.deformerWeights(weight_file, export=True, path=dir_path, deformer=skin_cluster, format="JSON")
+        mesh_weights = {}  # Store vertex weights
 
-        print(f"✅ Exported weights for {mesh} to {weight_path}")
+        for i in range(vertex_count):
+            vertex = f"{mesh}.vtx[{i}]"  # Construct vertex name
+            weights = cmds.skinPercent(skin_cluster, vertex, query=True, value=True)  # Get joint weights
+
+            # Filter only the highest 4 influences per vertex
+            top_influences = heapq.nlargest(4, zip(influences, weights), key=lambda x: x[1])
+
+            # Remove zero-weight influences
+            filtered_weights = {joint: weight for joint, weight in top_influences if weight > 0}
+
+            if filtered_weights:
+                mesh_weights[i] = filtered_weights  # Store weights per vertex
+
+        # Store weights for this mesh
+        weights_data[mesh] = mesh_weights
+
+    # Save weight data to JSON
+    weights_file = os.path.join(dir_path, "mesh_weights.json")
+    with open(weights_file, "w") as file:
+        json.dump(weights_data, file, indent=4)
+
+    print(f"✅ Skin weights exported to {weights_file}")
+
 
 def import_mesh_weights():
-    """Imports skin weights from JSON and applies them to imported meshes using deformerWeights."""
+    """Reads the skin weights JSON and applies them to imported meshes manually."""
     dir_path = os.path.join(os.path.expanduser("~"), "Desktop", "characterCompilerTest")
+    weights_file = os.path.join(dir_path, "mesh_weights.json")
+
+    if not os.path.exists(weights_file):
+        print("[ERROR] No mesh_weights.json file found. Cannot import weights.")
+        return
+
+    with open(weights_file, "r") as file:
+        mesh_weights = json.load(file)  # Read weight data from file
 
     selected_meshes = cmds.ls(selection=True, type="transform")
     if not selected_meshes:
-        print("No meshes selected!")
-        return
+        print("[WARNING] No meshes selected. Attempting to apply to all stored meshes.")
+        selected_meshes = list(mesh_weights.keys())  # Use all meshes from JSON if none are selected
 
     for mesh in selected_meshes:
-        weight_file = f"{mesh}_weights.json"
-        weight_path = os.path.join(dir_path, weight_file)
-
-        if not os.path.exists(weight_path):
-            print(f"[WARNING] No weight file found for {mesh}, skipping weight import.")
+        if mesh not in mesh_weights:
+            print(f"[WARNING] No weight data found for {mesh}, skipping import.")
             continue
 
         print(f"🔄 Importing weights for: {mesh}")
 
-        # **Unlock transformations to prevent import errors**
+        # **Unlock transformations to prevent errors**
         for attr in ["translateX", "translateY", "translateZ", "rotateX", "rotateY", "rotateZ", "scaleX", "scaleY", "scaleZ"]:
-            if cmds.getAttr(f"{mesh}.{attr}", lock=True):
+            if cmds.attributeQuery(attr, node=mesh, exists=True) and cmds.getAttr(f"{mesh}.{attr}", lock=True):
                 cmds.setAttr(f"{mesh}.{attr}", lock=False)
                 print(f"🔓 Unlocked {attr} on {mesh}")
 
-        # **Duplicate mesh to prevent weight mismatch**
-        dup_mesh = cmds.duplicate(mesh, name=f"{mesh}_dup")[0]
-
-        # **Find or recreate the skinCluster for the original mesh**
+        # **Find or create a skinCluster for the mesh**
         skin_clusters = cmds.ls(cmds.listHistory(mesh), type="skinCluster")
         if not skin_clusters:
             print(f"[INFO] No skinCluster found on {mesh}, binding joints before importing weights.")
-            
-            # Get all joints in the scene
-            joints = cmds.ls(type="joint")
-            if not joints:
-                print(f"[ERROR] No joints found, cannot bind {mesh}. Skipping weight import.")
-                cmds.delete(dup_mesh)  # Cleanup duplicate
+
+            # Get all joints listed in the stored weight data
+            all_joints = set()
+            for vertex_data in mesh_weights[mesh].values():
+                all_joints.update(vertex_data.keys())  # Collect all joints affecting any vertex
+
+            all_joints = list(filter(cmds.objExists, all_joints))  # Ensure joints exist in the scene
+            if not all_joints:
+                print(f"[ERROR] No valid joints found for {mesh}. Skipping weight import.")
                 continue
 
-            # **Rebind joints to ensure correct influence**
-            skin_cluster = cmds.skinCluster(joints, mesh, toSelectedBones=True, normalizeWeights=0)[0]  # **Fix: normalizeWeights=0 prevents auto-normalization**
+            # Create a new skinCluster with the correct joints
+            skin_cluster = cmds.skinCluster(all_joints, mesh, toSelectedBones=True, normalizeWeights=1)[0]
         else:
             skin_cluster = skin_clusters[0]
 
-        # **Fix: Get the correct skinCluster for the duplicated mesh**
-        dup_skin_clusters = cmds.ls(cmds.listHistory(dup_mesh), type="skinCluster")
-        if not dup_skin_clusters:
-            print(f"[INFO] No skinCluster found on {dup_mesh}, creating one for weight transfer.")
-            dup_skin_cluster = cmds.skinCluster(cmds.skinCluster(skin_cluster, query=True, influence=True), dup_mesh, toSelectedBones=True, normalizeWeights=0)[0]
-        else:
-            dup_skin_cluster = dup_skin_clusters[0]
+        # **Apply stored weights per vertex**
+        for vertex_index, influences in mesh_weights[mesh].items():
+            vertex = f"{mesh}.vtx[{vertex_index}]"
 
-        # **Delete old skinCluster and reapply new one**
-        cmds.delete(skin_cluster)
-        new_skin_cluster = cmds.skinCluster(cmds.skinCluster(dup_skin_cluster, query=True, influence=True), mesh, toSelectedBones=True, normalizeWeights=0)[0]
+            # **Filter out missing joints**
+            valid_influences = {joint: weight for joint, weight in influences.items() if cmds.objExists(joint)}
 
-        # **Import weights using deformerWeights**
-        cmds.deformerWeights(weight_file, im=True, path=dir_path, deformer=new_skin_cluster, method="index", format="JSON")
-
-        # **Copy skin weights from the duplicated mesh to original using correct settings**
-        cmds.copySkinWeights(ss=dup_skin_cluster, ds=new_skin_cluster, 
-                             noMirror=True, 
-                             surfaceAssociation="closestPoint", 
-                             influenceAssociation=["oneToOne", "closestJoint"])
-
-        # **Cleanup: Delete duplicate mesh**
-        cmds.delete(dup_mesh)
+            # **Apply weights using skinPercent**
+            if valid_influences:
+                cmds.skinPercent(skin_cluster, vertex, transformValue=list(valid_influences.items()))
 
         print(f"✅ Successfully imported weights for {mesh}")
 
