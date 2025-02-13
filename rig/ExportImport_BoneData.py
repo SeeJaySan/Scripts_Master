@@ -31,17 +31,15 @@ def get_bone_data():
     
     with open(desktop_path, "w") as file:
         json.dump(bone_data, file, indent=4)
-    print("Bone data saved to", desktop_path)
+    print("Bone data saved to ", desktop_path)
 
 def create_bones_from_file():
-    # Prompt user for directory to open the file dialog
-    dir_path = QtWidgets.QFileDialog.getExistingDirectory(None, "Select Directory", os.path.expanduser("~"))
     
-    if not dir_path:
-        print("No directory selected!")
+    if not desktop_path:
+        print("No file found")
         return
 
-    file_path = os.path.join(dir_path, "tmp.json")
+    file_path = os.path.join(desktop_path)
     
     if not os.path.exists(file_path):
         print("No tmp.json file found in the selected directory!")
