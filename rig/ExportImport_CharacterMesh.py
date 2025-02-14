@@ -173,7 +173,8 @@ def import_meshes():
 
             cmds.connectAttr(f"{place2d_texture}.outUV", f"{file_texture}.uvCoord", force=True)
             cmds.connectAttr(f"{place2d_texture}.outUvFilterSize", f"{file_texture}.uvFilterSize", force=True)
-
+            cmds.setAttr(f"{material}.specularRoughness", .75)
+            
             print(f"Texture re-linked: {texture_path} to {mesh}")
         else:
             print(f"Texture file missing for {mesh}, skipping texture assignment.")
