@@ -1,6 +1,7 @@
 import maya.cmds as cmds
 import maya.api.OpenMaya as om
 
+
 def average_vertex_weights():
     # Get selected vertices
     selection = cmds.ls(selection=True, fl=True)
@@ -8,7 +9,7 @@ def average_vertex_weights():
         cmds.error("Select exactly two vertices.")
 
     # Get the mesh from the selected vertices
-    mesh = selection[0].split('.')[0]
+    mesh = selection[0].split(".")[0]
 
     # Create a selection list and get the DAG path
     sel_list = om.MSelectionList()
@@ -19,7 +20,7 @@ def average_vertex_weights():
     mesh_fn = om.MFnMesh(dag_path)
 
     # Extract vertex indices
-    vertex_indices = [int(sel.split('[')[-1][:-1]) for sel in selection]
+    vertex_indices = [int(sel.split("[")[-1][:-1]) for sel in selection]
 
     # Find connected vertices for each selected vertex
     connected_vertices = []
@@ -43,9 +44,9 @@ def average_vertex_weights():
 
     # Construct the vertex names
     common_vertex_name = f"{mesh}.vtx[{common_vertex_index}]"
-    
+
     # Get the current skin cluster
-    skin_cluster = cmds.ls(cmds.listHistory(mesh), type='skinCluster')[0]
+    skin_cluster = cmds.ls(cmds.listHistory(mesh), type="skinCluster")[0]
 
     # Get the influences (joints) for the skin cluster
     influences = cmds.skinCluster(skin_cluster, query=True, influence=True)
@@ -59,16 +60,20 @@ def average_vertex_weights():
 
     # Set the weights using a list of tuples (influence, weight)
     weight_list = list(zip(influences, averaged_weights))
-    
+
     # Set the weights for the common vertex
     for influence, weight in weight_list:
-        cmds.skinPercent(skin_cluster, common_vertex_name, 
-                         transformValue=(influence, weight))
+        cmds.skinPercent(
+            skin_cluster, common_vertex_name, transformValue=(influence, weight)
+        )
 
-    print(f"Averaged weights from {selection[0]} and {selection[1]} onto {common_vertex_name}")
+    print(
+        f"Averaged weights from {selection[0]} and {selection[1]} onto {common_vertex_name}"
+    )
     print("Averaged weights:", dict(zip(influences, averaged_weights)))
-    
+
     return common_vertex_name
+
 
 # Run the function
 average_vertex_weights()

@@ -2,10 +2,32 @@ from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
 import maya.OpenMayaUI as omui
 from shiboken2 import wrapInstance
 import maya.cmds as cmds
-
-from PySide2.QtWidgets import QApplication, QWidget, QPushButton, QCheckBox, QLineEdit, QSlider, QRadioButton, QButtonGroup, QHBoxLayout, QVBoxLayout, QGroupBox, QLabel, QComboBox, QSpinBox, QSizePolicy, QTabWidget
+from PySide2.QtWidgets import (
+    QApplication,
+    QWidget,
+    QPushButton,
+    QCheckBox,
+    QLineEdit,
+    QSlider,
+    QRadioButton,
+    QButtonGroup,
+    QHBoxLayout,
+    QVBoxLayout,
+    QGroupBox,
+    QLabel,
+    QComboBox,
+    QSpinBox,
+    QSizePolicy,
+    QTabWidget,
+)
 from PySide2.QtCore import Qt
 import time
+
+#================================================================
+
+# Creating Widgets
+
+#================================================================
 
 from msc.modules import Utils_JointCreateAndOrientatorModule as jCO
 
@@ -72,8 +94,6 @@ class QuickToolsWindow(MayaQWidgetDockableMixin, QWidget):
         orient_joints_wdgt = self.create_orient_joints_widget()
         layout.addLayout(orient_joints_wdgt)
 
-
-
         layout4 = self.create_slider_widget()
         layout.addLayout(layout4)
 
@@ -91,7 +111,7 @@ class QuickToolsWindow(MayaQWidgetDockableMixin, QWidget):
     def create_second_tab(self):
         """Create layout for the second tab."""
         layout = QVBoxLayout()
-        
+
         sr_rename_wdgt, ps_rename_wdgt = self.create_rename_widgets()
         layout.addLayout(sr_rename_wdgt)
         layout.addLayout(ps_rename_wdgt)
@@ -107,6 +127,12 @@ class QuickToolsWindow(MayaQWidgetDockableMixin, QWidget):
         layout.addWidget(button)
 
         return layout
+
+    # ================================================================
+
+    # Creating Widgets
+
+    # ================================================================
 
     def create_joint_axis_widget(self):
         """Widget for controlling joint axis visibility."""
@@ -196,7 +222,7 @@ class QuickToolsWindow(MayaQWidgetDockableMixin, QWidget):
         """Placeholder widget for slider."""
         layout = QVBoxLayout(self)
         slider = QSlider(Qt.Horizontal)
-        slider.valueChanged.connect(lambda: print_widget_name('QSlider'))
+        slider.valueChanged.connect(lambda: print_widget_name("QSlider"))
         layout.addWidget(slider)
         return layout
 
@@ -205,8 +231,7 @@ class QuickToolsWindow(MayaQWidgetDockableMixin, QWidget):
         layout = QVBoxLayout(self)
         combo_box = QComboBox()
         combo_box.addItems(["Choice 1", "Choice 2", "Choice 3"])
-        combo_box.currentIndexChanged.connect(
-            lambda: print_widget_name('QComboBox'))
+        combo_box.currentIndexChanged.connect(lambda: print_widget_name("QComboBox"))
         layout.addWidget(combo_box)
         return layout
 
@@ -214,7 +239,7 @@ class QuickToolsWindow(MayaQWidgetDockableMixin, QWidget):
         """Placeholder widget for spin box."""
         layout = QVBoxLayout(self)
         spin_box = QSpinBox()
-        spin_box.valueChanged.connect(lambda: print_widget_name('QSpinBox'))
+        spin_box.valueChanged.connect(lambda: print_widget_name("QSpinBox"))
         layout.addWidget(spin_box)
         return layout
 
@@ -238,10 +263,9 @@ def show_dockable_widget():
             tm_tab_window = None  # Set the global variable to None
     except Exception as e:
         print(f"Error deleting the UI: {e}")
-        
+
     # Define a unique name for the workspace control
     workspace_control_name = "QuickToolsWindowWorkspaceControl"
-
 
     # Create the main window and set the parent
     tm_tab_window = QuickToolsWindow()
@@ -251,7 +275,9 @@ def show_dockable_widget():
         cmds.workspaceControl(workspace_control_name, label="Quick Tools")
 
     # Make the widget dockable by attaching it to the workspace control
-    cmds.workspaceControl(workspace_control_name, edit=True, uiScript=workspace_control_name)
+    cmds.workspaceControl(
+        workspace_control_name, edit=True, uiScript=workspace_control_name
+    )
 
     # Show the window
     tm_tab_window.show()

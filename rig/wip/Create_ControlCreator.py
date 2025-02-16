@@ -12,6 +12,7 @@ import os
 # TODO add different export types
 # TODO add options for animation?
 
+
 class ControlCreator(object):
 
     # constructor
@@ -99,8 +100,6 @@ class ControlCreator(object):
         if mirror == 1:
             self.MirrorControl()
         self.finalizeControl()
-
-
 
 
 # Main function to run the tool

@@ -37,12 +37,12 @@ class jointCreateAndOrientator(object):
         mc.joint(self.baseJnt, e=True, oj="xyz", secondaryAxisOrient="zup", ch=True)
 
         mc.joint(self.endJnt, e=True, oj="none", ch=True)
-        
+
     def turnOnJointAxisVis(self):
-    # bm_axisDisplay
-    # Forces the Local Rotation Axis display on or off for all joints or for the selected joints
+        # bm_axisDisplay
+        # Forces the Local Rotation Axis display on or off for all joints or for the selected joints
         # if no joints are selected, do it for all the joints in the scene
-        
+
         if len(mc.ls(sl=1, type="joint")) == 0:
             jointList = mc.ls(type="joint")
         else:
@@ -50,12 +50,12 @@ class jointCreateAndOrientator(object):
         # set the displayLocalAxis attribute to what the user specifies.
         for jnt in jointList:
             mc.setAttr(jnt + ".displayLocalAxis", 1)
-            
+
     def turnOffJointAxisVis(self):
-    # bm_axisDisplay
-    # Forces the Local Rotation Axis display on or off for all joints or for the selected joints
+        # bm_axisDisplay
+        # Forces the Local Rotation Axis display on or off for all joints or for the selected joints
         # if no joints are selected, do it for all the joints in the scene
-        
+
         if len(mc.ls(sl=1, type="joint")) == 0:
             jointList = mc.ls(type="joint")
         else:
@@ -63,6 +63,6 @@ class jointCreateAndOrientator(object):
         # set the displayLocalAxis attribute to what the user specifies.
         for jnt in jointList:
             mc.setAttr(jnt + ".displayLocalAxis", 0)
-            
+
     def createControl(self):
         print("this is a placeholder")

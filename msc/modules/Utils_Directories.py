@@ -1,5 +1,6 @@
 import os
 
+
 def createDirectory(dirPath):
     """Creates a directory if it does not exist."""
     if not os.path.exists(dirPath):

@@ -146,9 +146,10 @@ class TM_TabWindow(MayaQWidgetDockableMixin, QtWidgets.QDialog):
             # Pass the user_input to the script's main() function
             module.main(user_input).show()
         except AttributeError:
-            om.MGlobal.displayWarning(
-                "No main function found in {0}".format(selected_script)
-            )
+            pass
+            #om.MGlobal.displayWarning(
+                #"No main function found in {0}".format(selected_script)
+            #)
 
 
 def show_dockable_widget():
