@@ -17,8 +17,8 @@ SCRIPTS_PATHS = {
     "model": os.path.join(ROOTDIR, "model"),
     "rig": os.path.join(ROOTDIR, "rig"),
     "anim": os.path.join(ROOTDIR, "anim"),
-    "scene": os.path.join(ROOTDIR, "scene"),
-    "tool": os.path.join(ROOTDIR, "tool"),
+#    "scene": os.path.join(ROOTDIR, "scene"),
+#    "tool": os.path.join(ROOTDIR, "tool"),
     "wip": os.path.join(ROOTDIR, "WIP"),
 }
 
@@ -91,8 +91,8 @@ class TM_TabWindow(MayaQWidgetDockableMixin, QtWidgets.QDialog):
             "Model": TM_Tab(),
             "Rig": TM_Tab(),
             "Anim": TM_Tab(),
-            "Tool": TM_Tab(),
-            "Scene": TM_Tab(),
+        #    "Tool": TM_Tab(),
+        #    "Scene": TM_Tab(),
             "Wip": TM_Tab()
         }
 
@@ -117,10 +117,10 @@ class TM_TabWindow(MayaQWidgetDockableMixin, QtWidgets.QDialog):
             lambda: self.run_script("rig"))
         self.tabs["Anim"].run_btn.clicked.connect(
             lambda: self.run_script("anim"))
-        self.tabs["Tool"].run_btn.clicked.connect(
-            lambda: self.run_script("tool"))
-        self.tabs["Scene"].run_btn.clicked.connect(
-            lambda: self.run_script("scene"))
+        #self.tabs["Tool"].run_btn.clicked.connect(
+        #    lambda: self.run_script("tool"))
+        #self.tabs["Scene"].run_btn.clicked.connect(
+        #    lambda: self.run_script("scene"))
         self.tabs["Wip"].run_btn.clicked.connect(
             lambda: self.run_script("wip"))
 
