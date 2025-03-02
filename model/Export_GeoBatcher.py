@@ -1,29 +1,30 @@
 """
-ToolOps Batch Geometry Exporter
+/model/Export_GeoBatcher.py
 
 This script provides a Maya user interface for exporting selected geometries 
-in various file formats, including OBJ, FBX, and STL. The tool allows users 
-to select the desired export type and specify the export path.
+in multiple file formats, including OBJ, FBX, and STL. Users can choose 
+the desired export type and specify the export path.
 
-Features:
+### Features:
 - Export selected geometries as OBJ, FBX, or STL files.
 - Provide feedback for STL file naming issues.
 - Ensure correct handling of file paths and parent-child relationships.
 
-Usage:
-    - Run the `main` function to display the exporter UI.
-    - Select the export type (OBJ, FBX, or STL).
-    - Specify the export path.
-    - Click "Export" to export the selected geometries.
+### Usage:
+1. Run the `main` function to launch the exporter UI.
+2. Select the export format (OBJ, FBX, or STL).
+3. Specify the export path.
+4. Click "Export" to save the selected geometries.
 
-Author: CJ Nowacek
-Credits: CJ Nowacek
-License: GPL
-Version: 1.0.2
-Maintainer: CJ Nowacek
-Email: cj.nowacek@gmail.com
-Status: Production
+### Metadata:
+- **Author:** CJ Nowacek
+- **Version:** 1.0.2
+- **License:** GPL
+- **Maintainer:** CJ Nowacek
+- **Email:** cj.nowacek@gmail.com
+- **Status:** Production
 """
+
 
 import maya.cmds as mc
 import os

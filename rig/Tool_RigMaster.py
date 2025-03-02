@@ -1,19 +1,63 @@
-from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
+"""
+/rig/Tool_RigMaster.py
+
+This script provides a dockable UI inside Autodesk Maya for rigging workflows.
+It includes tools for joint creation, orientation, axis visibility, renaming, and miscellaneous widgets.
+
+### Features:
+- Supports creation, modification, and visualization of hierarchical structures.
+- Provides batch processing tools for efficient renaming and organization.
+- Includes interactive UI components such as sliders, dropdowns, and numeric inputs.
+- Designed for seamless integration within an existing workspace for enhanced accessibility.
+
+### Usage:
+1. Run the script to launch the `QuickToolsWindow` UI.
+2. Navigate through different tool tabs to access functionalities.
+3. Click buttons to execute rigging-related operations.
+
+### Metadata:
+- **Author:** CJ Nowacek
+- **Version:** 1.0.0
+- **License:** GPL
+- **Maintainer:** CJ Nowacek
+- **Status:** Production
+"""
+
+# ------------------------------
+# Imports
+# ------------------------------
 import maya.OpenMayaUI as omui
+from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
 from shiboken2 import wrapInstance
-import maya.cmds as cmds
-
-from PySide2.QtWidgets import (
-    QApplication, QWidget, QPushButton, QCheckBox, QLineEdit, QSlider, QRadioButton, 
-    QButtonGroup, QHBoxLayout, QVBoxLayout, QGroupBox, QLabel, QComboBox, QSpinBox, 
-    QSizePolicy, QTabWidget
-)
 from PySide2.QtCore import Qt
+from PySide2.QtWidgets import (
+    QApplication,
+    QWidget,
+    QPushButton,
+    QCheckBox,
+    QLineEdit,
+    QSlider,
+    QRadioButton,
+    QButtonGroup,
+    QHBoxLayout,
+    QVBoxLayout,
+    QGroupBox,
+    QLabel,
+    QComboBox,
+    QSpinBox,
+    QSizePolicy,
+    QTabWidget,
+    QMenuBar,
+    QMenu,
+)
 
-import time
+
 from msc.modules import Utils_JointCreateAndOrientatorModule as jCO
 
 
+# ------------------------------
+# Utility Functions
+# ------------------------------
 def print_widget_name(widget_name):
     """Helper function to print the name of interacted widgets."""
     print(f"Widget '{widget_name}' was interacted with.")
@@ -25,6 +69,9 @@ def get_maya_main_window():
     return wrapInstance(int(main_window_ptr), QWidget)
 
 
+# ------------------------------
+# Main UI Class
+# ------------------------------
 class QuickToolsWindow(MayaQWidgetDockableMixin, QWidget):
     """Main UI class for RigMaster, containing tool tabs and layouts."""
 
@@ -36,26 +83,100 @@ class QuickToolsWindow(MayaQWidgetDockableMixin, QWidget):
         # Initialize the joint module
         self.joint_module = jCO.jointCreateAndOrientator()
 
-        # Create main layout
+        # 🔹 Create main layout
         main_layout = QVBoxLayout(self)
 
-        # Create and add tab widget
+        # 🔹 Create Menu Bar (Manually Add It)
+        self.menu_bar = QMenuBar(self)
+        main_layout.addWidget(self.menu_bar)  # ✅ Add menu bar as a widget
+
+        # 🔹 Add File Menu
+        file_menu = self.menu_bar.addMenu("File")
+        file_menu.addAction("New", self.new_action)
+        file_menu.addAction("Open", self.open_action)
+        file_menu.addAction("Save", self.save_action)
+        file_menu.addSeparator()
+        file_menu.addAction("Exit", self.close)
+
+        # 🔹 Add Macros Menu
+        macros_menu = self.menu_bar.addMenu("Macros")
+        macros_menu.addAction("Unreal Auto Control Rig", self.unrealcontrolrig_action)
+        macros_menu.addAction("Redo", self.redo_action)
+
+        # 🔹 Add Help Menu
+        help_menu = self.menu_bar.addMenu("Help")
+        help_menu.addAction("About", self.about_action)
+
+        # 🔹 Level 1: Create "Export" Submenu
+        export_menu = QMenu("Export", self)
+
+        # 🔹 Level 2: Create "3D Models" Submenu inside "Export"
+        models_menu = QMenu("3D Models", self)
+
+        # 🔹 Level 3: Add Export Options inside "3D Models"
+        models_menu.addAction("Export as FBX", self.export_fbx_action)
+        models_menu.addAction("Export as OBJ", self.export_obj_action)
+
+        # Attach "3D Models" submenu inside "Export"
+        export_menu.addMenu(models_menu)
+
+        # Attach "Export" submenu inside "File"
+        file_menu.addMenu(export_menu)
+
+        # 🔹 Create and add tab widget
         self.tabs = QTabWidget(self)
         main_layout.addWidget(self.tabs)
 
-        # Create first tab (Quick Tools)
+        # 🔹 Create first tab (Quick Tools)
         first_tab = QWidget()
         first_tab.setLayout(self.create_first_tab())
         self.tabs.addTab(first_tab, "Quick Tools")
 
-        # Create second tab
+        # 🔹 Create second tab
         second_tab = QWidget()
         second_tab.setLayout(self.create_second_tab())
-        self.tabs.addTab(second_tab, "Second Tab")
+        self.tabs.addTab(second_tab, "Renamer")
 
-        # Set main layout
+        # 🔹 Create third tab
+        third_tab = QWidget()
+        third_tab.setLayout(self.create_third_tab())
+        self.tabs.addTab(third_tab, "Rig Compiler")
+
+        # 🔹 Set main layout
         self.setLayout(main_layout)
 
+    # ------------------------------
+    # Menu Actions
+    # ------------------------------
+    def new_action(self):
+        print("New File Created")
+
+    def open_action(self):
+        print("Open File Dialog Triggered")
+
+    def save_action(self):
+        print("Save File Dialog Triggered")
+
+    def unrealcontrolrig_action(self):
+        from rig.modules import UnrealAutoRig as bUR
+
+        bUR.BuildUnrealRig()
+
+    def redo_action(self):
+        print("Redo Action")
+
+    def about_action(self):
+        print("About Dialog Triggered")
+
+    def export_fbx_action(self):
+        print("Exporting as FBX...")
+
+    def export_obj_action(self):
+        print("Exporting as OBJ...")
+
+    # ------------------------------
+    # First Tab (Quick Tools)
+    # ------------------------------
     def create_first_tab(self):
         """Creates layout for the Quick Tools tab."""
         layout = QVBoxLayout()
@@ -81,6 +202,9 @@ class QuickToolsWindow(MayaQWidgetDockableMixin, QWidget):
 
         return layout
 
+    # ------------------------------
+    # Second Tab
+    # ------------------------------
     def create_second_tab(self):
         """Creates layout for the second tab."""
         layout = QVBoxLayout()
@@ -101,6 +225,35 @@ class QuickToolsWindow(MayaQWidgetDockableMixin, QWidget):
 
         return layout
 
+    # ------------------------------
+    # Third Tab
+    # ------------------------------
+    def create_third_tab(self):
+        """Creates layout for the Quick Tools tab."""
+        layout = QVBoxLayout()
+
+        # Add joint axis visibility buttons
+        layout.addLayout(self.create_joint_axis_widget())
+
+        # Add create and aim joint buttons
+        layout.addLayout(self.create_create_aim_widgets())
+
+        # Add axis radio button groups
+        layout.addWidget(self.create_axis_radio_group("Aim"))
+        layout.addWidget(self.create_axis_radio_group("Up"))
+
+        # Add orient joints button
+        layout.addLayout(self.create_orient_joints_widget())
+
+        # Additional UI elements (Slider, ComboBox, SpinBox, Label)
+        layout.addLayout(self.create_slider_widget())
+        layout.addLayout(self.create_combo_box_widget())
+        layout.addLayout(self.create_spin_box_widget())
+        layout.addLayout(self.create_label_widget())
+
+    # ------------------------------
+    # Widgets
+    # ------------------------------
     def create_joint_axis_widget(self):
         """Creates widget for controlling joint axis visibility."""
         layout = QHBoxLayout()
@@ -158,7 +311,7 @@ class QuickToolsWindow(MayaQWidgetDockableMixin, QWidget):
         """Creates a slider widget."""
         layout = QVBoxLayout()
         slider = QSlider(Qt.Horizontal)
-        slider.valueChanged.connect(lambda: print_widget_name('QSlider'))
+        slider.valueChanged.connect(lambda: print_widget_name("QSlider"))
         layout.addWidget(slider)
         return layout
 
@@ -167,7 +320,7 @@ class QuickToolsWindow(MayaQWidgetDockableMixin, QWidget):
         layout = QVBoxLayout()
         combo_box = QComboBox()
         combo_box.addItems(["Choice 1", "Choice 2", "Choice 3"])
-        combo_box.currentIndexChanged.connect(lambda: print_widget_name('QComboBox'))
+        combo_box.currentIndexChanged.connect(lambda: print_widget_name("QComboBox"))
         layout.addWidget(combo_box)
         return layout
 
@@ -175,7 +328,7 @@ class QuickToolsWindow(MayaQWidgetDockableMixin, QWidget):
         """Creates a spin box widget."""
         layout = QVBoxLayout()
         spin_box = QSpinBox()
-        spin_box.valueChanged.connect(lambda: print_widget_name('QSpinBox'))
+        spin_box.valueChanged.connect(lambda: print_widget_name("QSpinBox"))
         layout.addWidget(spin_box)
         return layout
 
@@ -186,6 +339,9 @@ class QuickToolsWindow(MayaQWidgetDockableMixin, QWidget):
         return layout
 
 
+# ------------------------------
+# Dockable Widget Function
+# ------------------------------
 def show_dockable_widget():
     """Shows the dockable QuickToolsWindow in Maya."""
     global tm_tab_window
