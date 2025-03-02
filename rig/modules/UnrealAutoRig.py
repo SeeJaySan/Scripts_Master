@@ -1,3 +1,29 @@
+"""
+/UnrealRigBuilder.py
+
+This script automates the creation of a control rig inside Autodesk Maya, specifically designed 
+for Unreal Engine workflows. It provides tools for generating IK and FK systems, twist joints, 
+and control curves to facilitate character rigging.
+
+### Features:
+- Generates structured IK, FK, and control rig hierarchies.
+- Automates the creation of twist joints for improved deformation.
+- Provides customizable control curves for easy manipulation.
+- Supports pole vector constraints and IK-FK switching.
+- Organizes rig components within a dedicated hierarchy for clarity.
+
+### Usage:
+1. Run the script to execute the `BuildUnrealRig` function.
+2. The rig will be generated, including IK, FK, and control rigs.
+3. Adjust control curves and constraints as needed within Maya.
+
+### Metadata:
+- **Author:** CJ Nowacek
+- **Version:** 1.0.0
+- **License:** GPL
+- **Maintainer:** CJ Nowacek
+- **Status:** WIP
+"""
 import maya.cmds as mc
 import maya.mel as mel
 import maya.OpenMaya as om
@@ -396,8 +422,8 @@ def createFKSpine(pelvis, spine_01, spine_02, spine_03, spine_04):
         mc.parentConstraint(controlList[i], boneList[i], mo=True)
 
 
-# Run Auto Rig
-def run():
+# BuildUnrealRig Auto Rig
+def BuildUnrealRig():
     # Create rig folder--------------------------------------------------------------------------|
     createControlRigFolder()
 
@@ -433,4 +459,3 @@ def run():
     create_twist_joints("lowerarm_r", "hand_r", "lowerarm", "r", 5)"""
 
 
-run()

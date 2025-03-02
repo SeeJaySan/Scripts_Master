@@ -27,10 +27,10 @@ def GetExportMeshes():
 # Get skeleton to be exported
 def GetExportSkeleton():
     # List all joint nodes in the scene
-    joint_nodes = mc.ls(type='transform')
+    transform_nodes = mc.ls(type='transform')
 
     # Check if any of the joint nodes is named 'Skeleton'
-    if 'Skeleton' in joint_nodes:
+    if 'Skeleton' in transform_nodes:
         mc.select('Skeleton')
         mc.SelectHierarchy()  # Select all nodes in the hierarchy
         exportSkeleton = mc.ls(sl=True)

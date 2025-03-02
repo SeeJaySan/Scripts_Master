@@ -5,21 +5,31 @@ import shutil
 import json
 import heapq
 
+def main (buildPath="nul", *args):
+    if buildPath == "nul":
+        useBuildPath = 0
+
 
 def get_texture_path(mesh):
     """Retrieve the texture file path from the material assigned to the mesh."""
-    
+
     # Get the shape node of the mesh
     shapes = cmds.listRelatives(mesh, shapes=True) or []
     if not shapes:
-        print(f"[WARNING] No shape found for {mesh}. It may be a group or empty transform.")
+        print(
+            f"[WARNING] No shape found for {mesh}. It may be a group or empty transform."
+        )
         return None
     shape_node = shapes[0]
 
     # Get the shading group using listSets
-    shading_groups = cmds.listSets(object=shape_node, type=1)  # Type=1 ensures it's a shading group
+    shading_groups = cmds.listSets(
+        object=shape_node, type=1
+    )  # Type=1 ensures it's a shading group
     if not shading_groups:
-        print(f"[WARNING] No shading group found for {mesh}. Material might be missing.")
+        print(
+            f"[WARNING] No shading group found for {mesh}. Material might be missing."
+        )
         return None
     shading_group = shading_groups[0]
 
@@ -33,7 +43,9 @@ def get_texture_path(mesh):
     # Find file nodes connected to the material
     file_nodes = cmds.listConnections(material, type="file") or []
     if not file_nodes:
-        print(f"[WARNING] No file texture node found for {mesh}. It may be using procedural textures.")
+        print(
+            f"[WARNING] No file texture node found for {mesh}. It may be using procedural textures."
+        )
         return None
 
     # Return the first valid texture path
@@ -46,6 +58,7 @@ def get_texture_path(mesh):
 
     print(f"[WARNING] No valid texture file found for {mesh}")
     return None
+
 
 def export_selected_meshes():
     """Exports selected meshes as OBJ files and saves a JSON file with texture paths."""
@@ -76,15 +89,22 @@ def export_selected_meshes():
         print("Exporting OBJ:", obj_file)
 
         cmds.select(mesh)
-        cmds.file(obj_file, force=True, options="groups=1;ptgroups=1;materials=1;smoothing=1;normals=1",
-                  type="OBJexport", exportSelected=True)
+        cmds.file(
+            obj_file,
+            force=True,
+            options="groups=1;ptgroups=1;materials=1;smoothing=1;normals=1",
+            type="OBJexport",
+            exportSelected=True,
+        )
 
         texture_path = get_texture_path(mesh)
-        
+
         # Copy texture to the textures folder and update its path
         new_texture_path = None
         if texture_path and os.path.exists(texture_path):
-            new_texture_path = os.path.join(texture_folder, os.path.basename(texture_path))
+            new_texture_path = os.path.join(
+                texture_folder, os.path.basename(texture_path)
+            )
             shutil.copy(texture_path, new_texture_path)  # Copy the texture file
 
         mesh_data[mesh] = {"texture": new_texture_path}  # Store new relative path
@@ -94,6 +114,7 @@ def export_selected_meshes():
         json.dump(mesh_data, file, indent=4)
 
     print(f"Meshes and textures exported to {dir_path}")
+
 
 def import_meshes():
     """Imports OBJ files one at a time and re-links textures from the textures folder."""
@@ -145,9 +166,15 @@ def import_meshes():
         place2d_node = f"{mesh}_place2d"
 
         if not cmds.objExists(material_name):
-            material = cmds.shadingNode("standardSurface", asShader=True, name=material_name)
-            shading_group = cmds.sets(renderable=True, noSurfaceShader=True, empty=True, name=shading_group)
-            cmds.connectAttr(f"{material}.outColor", f"{shading_group}.surfaceShader", force=True)
+            material = cmds.shadingNode(
+                "standardSurface", asShader=True, name=material_name
+            )
+            shading_group = cmds.sets(
+                renderable=True, noSurfaceShader=True, empty=True, name=shading_group
+            )
+            cmds.connectAttr(
+                f"{material}.outColor", f"{shading_group}.surfaceShader", force=True
+            )
         else:
             material = material_name
 
@@ -162,25 +189,36 @@ def import_meshes():
                 file_texture = file_node
 
             if not cmds.objExists(place2d_node):
-                place2d_texture = cmds.shadingNode("place2dTexture", asUtility=True, name=place2d_node)
+                place2d_texture = cmds.shadingNode(
+                    "place2dTexture", asUtility=True, name=place2d_node
+                )
             else:
                 place2d_texture = place2d_node
 
             cmds.setAttr(f"{file_texture}.fileTextureName", texture_path, type="string")
 
-            if not cmds.isConnected(f"{file_texture}.outColor", f"{material}.baseColor"):
-                cmds.connectAttr(f"{file_texture}.outColor", f"{material}.baseColor", force=True)
+            if not cmds.isConnected(
+                f"{file_texture}.outColor", f"{material}.baseColor"
+            ):
+                cmds.connectAttr(
+                    f"{file_texture}.outColor", f"{material}.baseColor", force=True
+                )
 
-            cmds.connectAttr(f"{place2d_texture}.outUV", f"{file_texture}.uvCoord", force=True)
-            cmds.connectAttr(f"{place2d_texture}.outUvFilterSize", f"{file_texture}.uvFilterSize", force=True)
-            cmds.setAttr(f"{material}.specularRoughness", .75)
-            
+            cmds.connectAttr(
+                f"{place2d_texture}.outUV", f"{file_texture}.uvCoord", force=True
+            )
+            cmds.connectAttr(
+                f"{place2d_texture}.outUvFilterSize",
+                f"{file_texture}.uvFilterSize",
+                force=True,
+            )
+            cmds.setAttr(f"{material}.specularRoughness", 0.75)
+
             print(f"Texture re-linked: {texture_path} to {mesh}")
         else:
             print(f"Texture file missing for {mesh}, skipping texture assignment.")
 
     print("Meshes imported and textures re-linked.")
-
 
 
 def export_mesh_weights():
@@ -202,20 +240,28 @@ def export_mesh_weights():
             continue
 
         skin_cluster = skin_clusters[0]  # Get the first skinCluster found
-        influences = cmds.skinCluster(skin_cluster, query=True, influence=True)  # Get all joints affecting mesh
+        influences = cmds.skinCluster(
+            skin_cluster, query=True, influence=True
+        )  # Get all joints affecting mesh
         vertex_count = cmds.polyEvaluate(mesh, vertex=True)  # Number of vertices
 
         mesh_weights = {}  # Store vertex weights
 
         for i in range(vertex_count):
             vertex = f"{mesh}.vtx[{i}]"  # Construct vertex name
-            weights = cmds.skinPercent(skin_cluster, vertex, query=True, value=True)  # Get joint weights
+            weights = cmds.skinPercent(
+                skin_cluster, vertex, query=True, value=True
+            )  # Get joint weights
 
             # Filter only the highest 4 influences per vertex
-            top_influences = heapq.nlargest(4, zip(influences, weights), key=lambda x: x[1])
+            top_influences = heapq.nlargest(
+                4, zip(influences, weights), key=lambda x: x[1]
+            )
 
             # Remove zero-weight influences
-            filtered_weights = {joint: weight for joint, weight in top_influences if weight > 0}
+            filtered_weights = {
+                joint: weight for joint, weight in top_influences if weight > 0
+            }
 
             if filtered_weights:
                 mesh_weights[i] = filtered_weights  # Store weights per vertex
@@ -246,7 +292,9 @@ def import_mesh_weights():
     selected_meshes = cmds.ls(selection=True, type="transform")
     if not selected_meshes:
         print("[WARNING] No meshes selected. Attempting to apply to all stored meshes.")
-        selected_meshes = list(mesh_weights.keys())  # Use all meshes from JSON if none are selected
+        selected_meshes = list(
+            mesh_weights.keys()
+        )  # Use all meshes from JSON if none are selected
 
     for mesh in selected_meshes:
         if mesh not in mesh_weights:
@@ -256,28 +304,50 @@ def import_mesh_weights():
         print(f"🔄 Importing weights for: {mesh}")
 
         # **Unlock transformations to prevent errors**
-        for attr in ["translateX", "translateY", "translateZ", "rotateX", "rotateY", "rotateZ", "scaleX", "scaleY", "scaleZ"]:
-            if cmds.attributeQuery(attr, node=mesh, exists=True) and cmds.getAttr(f"{mesh}.{attr}", lock=True):
+        for attr in [
+            "translateX",
+            "translateY",
+            "translateZ",
+            "rotateX",
+            "rotateY",
+            "rotateZ",
+            "scaleX",
+            "scaleY",
+            "scaleZ",
+        ]:
+            if cmds.attributeQuery(attr, node=mesh, exists=True) and cmds.getAttr(
+                f"{mesh}.{attr}", lock=True
+            ):
                 cmds.setAttr(f"{mesh}.{attr}", lock=False)
                 print(f"🔓 Unlocked {attr} on {mesh}")
 
         # **Find or create a skinCluster for the mesh**
         skin_clusters = cmds.ls(cmds.listHistory(mesh), type="skinCluster")
         if not skin_clusters:
-            print(f"[INFO] No skinCluster found on {mesh}, binding joints before importing weights.")
+            print(
+                f"[INFO] No skinCluster found on {mesh}, binding joints before importing weights."
+            )
 
             # Get all joints listed in the stored weight data
             all_joints = set()
             for vertex_data in mesh_weights[mesh].values():
-                all_joints.update(vertex_data.keys())  # Collect all joints affecting any vertex
+                all_joints.update(
+                    vertex_data.keys()
+                )  # Collect all joints affecting any vertex
 
-            all_joints = list(filter(cmds.objExists, all_joints))  # Ensure joints exist in the scene
+            all_joints = list(
+                filter(cmds.objExists, all_joints)
+            )  # Ensure joints exist in the scene
             if not all_joints:
-                print(f"[ERROR] No valid joints found for {mesh}. Skipping weight import.")
+                print(
+                    f"[ERROR] No valid joints found for {mesh}. Skipping weight import."
+                )
                 continue
 
             # Create a new skinCluster with the correct joints
-            skin_cluster = cmds.skinCluster(all_joints, mesh, toSelectedBones=True, normalizeWeights=1)[0]
+            skin_cluster = cmds.skinCluster(
+                all_joints, mesh, toSelectedBones=True, normalizeWeights=1
+            )[0]
         else:
             skin_cluster = skin_clusters[0]
 
@@ -286,11 +356,17 @@ def import_mesh_weights():
             vertex = f"{mesh}.vtx[{vertex_index}]"
 
             # **Filter out missing joints**
-            valid_influences = {joint: weight for joint, weight in influences.items() if cmds.objExists(joint)}
+            valid_influences = {
+                joint: weight
+                for joint, weight in influences.items()
+                if cmds.objExists(joint)
+            }
 
             # **Apply weights using skinPercent**
             if valid_influences:
-                cmds.skinPercent(skin_cluster, vertex, transformValue=list(valid_influences.items()))
+                cmds.skinPercent(
+                    skin_cluster, vertex, transformValue=list(valid_influences.items())
+                )
 
         print(f"✅ Successfully imported weights for {mesh}")
 
@@ -305,8 +381,12 @@ class MeshToolUI(QtWidgets.QWidget):
 
         self.export_button = QtWidgets.QPushButton("Export Meshes")
         self.import_button = QtWidgets.QPushButton("Import Meshes")
-        self.export_weights_button = QtWidgets.QPushButton("Export Weights")  # New Button
-        self.import_weights_button = QtWidgets.QPushButton("Import Weights")  # New Button
+        self.export_weights_button = QtWidgets.QPushButton(
+            "Export Weights"
+        )  # New Button
+        self.import_weights_button = QtWidgets.QPushButton(
+            "Import Weights"
+        )  # New Button
 
         self.layout().addWidget(self.export_button)
         self.layout().addWidget(self.import_button)
@@ -315,10 +395,16 @@ class MeshToolUI(QtWidgets.QWidget):
 
         self.export_button.clicked.connect(export_selected_meshes)
         self.import_button.clicked.connect(import_meshes)
-        self.export_weights_button.clicked.connect(export_mesh_weights)  # Connect Button
-        self.import_weights_button.clicked.connect(import_mesh_weights)  # Connect Button
+        self.export_weights_button.clicked.connect(
+            export_mesh_weights
+        )  # Connect Button
+        self.import_weights_button.clicked.connect(
+            import_mesh_weights
+        )  # Connect Button
 
         self.show()
+
+
 mesh_tool_ui = None
 
 
