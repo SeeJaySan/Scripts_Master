@@ -160,7 +160,7 @@ class QuickToolsWindow(MayaQWidgetDockableMixin, QWidget):
         print("Save File Dialog Triggered")
 
     def unrealcontrolrig_action(self):
-        from modules.rig import auto_rig_unreal as bUR
+        from modules.rig import unreal_auto_rig as bUR
 
         bUR.BuildUnrealRig()
 

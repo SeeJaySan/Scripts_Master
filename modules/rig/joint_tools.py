@@ -109,4 +109,4 @@ def freeze_rotation_on_joints():
         print("No objects selected. Please select a joint.")
 
 def always_deform():
-    
+    pass

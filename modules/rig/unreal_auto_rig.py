@@ -1,8 +1,8 @@
 """
 /UnrealRigBuilder.py
 
-This script automates the creation of a control rig inside Autodesk Maya, specifically designed 
-for Unreal Engine workflows. It provides tools for generating IK and FK systems, twist joints, 
+This script automates the creation of a control rig inside Autodesk Maya, specifically designed
+for Unreal Engine workflows. It provides tools for generating IK and FK systems, twist joints,
 and control curves to facilitate character rigging.
 
 ### Features:
@@ -24,6 +24,7 @@ and control curves to facilitate character rigging.
 - **Maintainer:** CJ Nowacek
 - **Status:** WIP
 """
+
 import maya.cmds as mc
 import maya.mel as mel
 import maya.OpenMaya as om
@@ -315,7 +316,7 @@ def createFKControls(bone):
 
     for i in range(len(boneList)):
 
-        spine_control = mc.curve(
+        fk_control = mc.curve(
             n="{0}_con".format(boneList[i]),
             d=1,
             p=[
@@ -338,16 +339,16 @@ def createFKControls(bone):
             ],
         )
 
-        controlList.append(spine_control)
+        controlList.append(fk_control)
 
         mc.xform(s=[0.5, 4, 3])
-        mc.select(spine_control)
+        mc.select(fk_control)
         grp = mc.group(n="{0}_grp".format(boneList[i]), p=CONTROL_RIG_FOLDER_NAME)
         groupList.append(grp)
 
         mc.select(grp, "{0}".format(boneList[i]))
         mel.eval("MatchTransform;")
-        mc.makeIdentity(spine_control, r=True, a=True, s=True)
+        mc.makeIdentity(fk_control, r=True, a=True, s=True)
     """print(controlList)
     print(groupList)
     mc.parent(groupList[4], controlList[3])
@@ -364,8 +365,78 @@ def createFKControls(bone):
 
 
 # create IkfkSwitch
-def createIkfkSwitch():
+def createIkfkSwitch(limb, side, sj, mj, ee):
+    # Create Blend Colors
 
+    root_blend_color = mc.createNode(
+        "blendColors", name=f"{limb}_{side}_{sj}_BLENDECOLOR"
+    )
+    mid_blend_color = mc.createNode(
+        "blendColors", name=f"{limb}_{side}_{mj}_BLENDECOLOR"
+    )
+    end_blend_color = mc.createNode(
+        "blendColors", name=f"{limb}_{side}_{ee}_BLENDECOLOR"
+    )
+    
+    blenderList = []
+    blenderList.append(root_blend_color)
+    blenderList.append(mid_blend_color)
+    blenderList.append(end_blend_color)
+    
+    # Connecting IKFK blender root
+    mc.connectAttr(
+        f"{fkjoints1}.rotate", f"{root_blend_color}.color1"
+    )
+    mc.connectAttr(
+        f"{ikjoints1}.rotate", f"{root_blend_color}.color2"
+    )
+    mc.connectAttr(
+        f"{root_blend_color}.output", f"{driverjoints1}.rotate"
+    )
+    # Connecting IKFK blender mid
+    mc.connectAttr(f"{fkjoints2}.rotate", f"{mid_blend_color}.color1")
+    mc.connectAttr(f"{ikjoints2}.rotate", f"{mid_blend_color}.color2")
+    mc.connectAttr(
+        f"{mid_blend_color}.output", f"{driverjoints2}.rotate"
+    )
+    # Connecting IKFK blender end
+    mc.connectAttr(f"{fkjoints3}.rotate", f"{end_blend_color}.color1")
+    mc.connectAttr(f"{ikjoints3}.rotate", f"{end_blend_color}.color2")
+    mc.connectAttr(
+        f"{end_blend_color}.output", f"{driverjoints3}.rotate"
+    )
+    # Create Parent Constraints--------------------------------------------------------|
+    mc.parentConstraint(fkjoints0, driverjoints0, mo=True)
+    mc.parentConstraint(driverjoints0, bn0, mo=True)
+    mc.parentConstraint(driverjoints1, bn1, mo=True)
+    mc.parentConstraint(driverjoints2, bn2, mo=True)
+    mc.parentConstraint(driverjoints3, bn3, mo=True)
+    # Create Container----------------------------------------------------------------|
+    ikfk_attributes_Grp = mc.createNode(
+        "transform", name=f"{name}_ATRIBUTES_GRP"
+    )
+    mc.addAttr(ln="IKFK_Switch", at="float", k=True, min=0, max=1)
+    arm_attributes_asset = mc.container(name=f"{name}_ASSET")
+    mc.container(arm_attributes_asset, e=True, ish=True, f=True, an=ikfk_attributes_Grp)
+    mc.parent(ikfk_attributes_Grp, rigGroup)
+    IKFK_reverse = mc.createNode("reverse", n=f"{name}_IKFK_reverse")
+    # Connect attribute to the reverse
+    mc.connectAttr(f"{ikfk_attributes_Grp}.IKFK_Switch", f"{IKFK_reverse}.input.inputX")
+    # Connect the reverse to the blend color nodes
+    mc.connectAttr(f"{IKFK_reverse}.input.inputX", f"{root_blend_color}.blender")
+    mc.connectAttr(f"{IKFK_reverse}.input.inputX", f"{mid_blend_color}.blender")
+    mc.connectAttr(f"{IKFK_reverse}.input.inputX", f"{end_blend_color}.blender")
+    # Add controls to the asset
+    for i in controlList, blenderList:
+        mc.container(arm_attributes_asset, edit=True, addNode=i)
+    # Publish name 'IKFK Switch'
+    mc.container(arm_attributes_asset, e=True, pn=("IKFK_Switch"))
+    # Bind ikfk attribute from the group to the container asset
+    mc.container(
+        arm_attributes_asset,
+        e=True,
+        ba=(f"{ikfk_attributes_Grp}.IKFK_Switch", "IKFK_Switch"),
+    )
     pass
 
 
@@ -428,7 +499,7 @@ def BuildUnrealRig():
     createControlRigFolder()
 
     # Create duplicate bones for the IK and FK systems--------------------------------------------------------------------------|
-    Control_Rig_Bones = createJointDups(suff="cr")
+    Driver_Rig_Bones = createJointDups(suff="driver")
     Ik_Rig_Bones = createJointDups(suff="ik")
     Fk_Rig_Bones = createJointDups(suff="fk")
 
@@ -442,20 +513,21 @@ def BuildUnrealRig():
     createBasicIK("leg", "r", "thigh", "calf", "foot", "ik")
     createBasicIK("arm", "l", "upperarm", "lowerarm", "hand", "ik")
     createBasicIK("arm", "r", "upperarm", "lowerarm", "hand", "ik")
-    
+
     # createIkfkSwitch(Control_Rig_Bones, Ik_Rig_Bones, Fk_Rig_Bones)
-    
+
+    createIkfkSwitch("arm", "r", "upperarm", "lowerarm", "hand", "ik")
+
     # Creating twist joints--------------------------------------------------------------------------|
 
-
     # Create Joints, Correctives, etc
-    """create_twist_joints("thigh_l", "calf_l", "thigh", "l", 5)
+    """
+    create_twist_joints("thigh_l", "calf_l", "thigh", "l", 5)
     create_twist_joints("thigh_r", "calf_r", "thigh", "r", 5)
     create_twist_joints("calf_l", "foot_l", "calf", "l", 5)
     create_twist_joints("calf_r", "foot_r", "calf", "r", 5)
     create_twist_joints("upperarm_l", "lowerarm_l", "upperarm", "l", 4)
     create_twist_joints("upperarm_r", "lowerarm_r", "upperarm", "r", 4)
     create_twist_joints("lowerarm_l", "hand_l", "lowerarm", "l", 5)
-    create_twist_joints("lowerarm_r", "hand_r", "lowerarm", "r", 5)"""
-
-
+    create_twist_joints("lowerarm_r", "hand_r", "lowerarm", "r", 5)
+    """
